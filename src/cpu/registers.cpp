@@ -266,7 +266,7 @@ uint8_t Registers::get_Z(){
 */
 void Registers::set_Z(uint8_t data){
   if(!data) registers[6] = registers[6] & ~(1 << 7);
-  else      registers[6] = registers[6] | ~(1 << 7);
+  else      registers[6] = registers[6] |  (1 << 7);
 }
 
 /** Registers::get_N
@@ -287,7 +287,7 @@ uint8_t Registers::get_N(){
 */
 void Registers::set_N(uint8_t data){
   if(!data) registers[6] = registers[6] & ~(1 << 6);
-  else      registers[6] = registers[6] | ~(1 << 6);
+  else      registers[6] = registers[6] |  (1 << 6);
 }
 
 /** Registers::get_H
@@ -308,7 +308,7 @@ uint8_t Registers::get_H(){
 */
 void Registers::set_H(uint8_t data){
   if(!data) registers[6] = registers[6] & ~(1 << 5);
-  else      registers[6] = registers[6] | ~(1 << 5);
+  else      registers[6] = registers[6] |  (1 << 5);
 }
 
 /** Registers::get_C
@@ -329,6 +329,6 @@ uint8_t Registers::get_C(){
 */
 void Registers::set_C(uint8_t data){
   if(!data) registers[6] = registers[6] & ~(1 << 4);
-  else      registers[6] = registers[6] | ~(1 << 4);
+  else      registers[6] = registers[6] |  (1 << 4);
 }
 

@@ -300,7 +300,62 @@ void Cpu::execute_control_br(Bus* bus, uint8_t opcode){}
 
 void Cpu::execute_control_misc(Bus* bus, uint8_t opcode){}
 
-void Cpu::execute_x8_rsb(Bus* bus, uint8_t opcode){}
+/** CPU::execute_x8_rsb
+    Collects the execution of all the instructions in the
+    category x8 rsb (Rotate/Shift/Bit 8 bits)
+
+    @param bus Bus* pointer to a bus to use for reading
+    @param opcode uint8_t opcode of the instruction to run
+
+*/
+void Cpu::execute_x8_rsb(Bus* bus, uint8_t opcode){
+  uint8_t zzz = get_zzz(opcode);
+  uint8_t yyy = get_yyy(opcode);
+  uint8_t u8 = read_x8(bus, zzz);
+
+  // Bit N and H are always reset in instructions which are not BIT, RES and SET
+  if(check_mask(opcode, "00xxxxxx")) registers.set_H(0), registers.set_N(0);
+
+  if(check_mask(opcode, "00000xxx")){ // RLC instruction
+    registers.set_C(u8 & 0x80); registers.set_Z(u8 == 0);
+    write_x8(bus, zzz, (u8 << 1) | (u8 >> 7));
+  }
+  if(check_mask(opcode, "00001xxx")){   //RRC
+    registers.set_C(u8 & 0x01); registers.set_Z(u8 == 0);
+    write_x8(bus, zzz, (u8 >> 1) | (u8 << 7));
+  }
+  if(check_mask(opcode, "00010xxx")){   // RL
+    write_x8(bus, zzz, (u8 << 1) | (registers.get_C()));
+    registers.set_Z(((u8 << 1) | registers.get_C()) == 0); registers.set_C(u8 & 0x80);
+  }
+  if(check_mask(opcode, "00011xxx")){ // RR
+    write_x8(bus, zzz, (u8 >> 1) | (registers.get_C() << 7));
+    registers.set_Z(((u8 >> 1) | (registers.get_C() << 7)) == 0); registers.set_C(u8 & 0x01);
+  }
+  if(check_mask(opcode, "00100xxx")){ // SLA
+    registers.set_C(u8 & 0x80); registers.set_Z((u8 << 1) == 0);
+    write_x8(bus, zzz, (u8 << 1));
+  }
+  if(check_mask(opcode, "00101xxx")){  // SRA
+    write_x8(bus, zzz, (u8 & 0x80) | (u8 >> 1));
+    registers.set_Z(((u8 & 0x80) | (u8 >> 1)) == 0); registers.set_C(u8 & 0x01);
+  }
+  if(check_mask(opcode, "00110xxx")){ // SWAP
+    registers.set_Z(u8 == 0), registers.set_C(0);
+    write_x8(bus, zzz, (u8 << 4) | (u8 >> 4));
+  }
+  if(check_mask(opcode, "00111xxx")){  // SRL
+    registers.set_C(u8 & 0x01); registers.set_Z((u8 >> 1) == 0);
+    write_x8(bus, zzz, (u8 >> 1));
+  }
+  if(check_mask(opcode, "01yyyxxx")){  // BIT
+    registers.set_H(1), registers.set_N(0);
+    registers.set_Z(u8 & (1 << yyy));
+  }
+  if(check_mask(opcode, "1zyyyxxx")){ // RES/SET
+    write_x8(bus, zzz, (opcode & 0x40) ? (u8 | (1 << yyy)) : (u8 & ~(1 << yyy)));
+  }
+}
 
 /** CPU::execute_invalid
     Check whether the provided instruction is invalid
