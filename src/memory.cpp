@@ -7,7 +7,7 @@
     @return uint8_t read byte
 */
 uint8_t Memory::read(uint16_t addr){
-  if(addr >= size)
+  if(addr >= size_addr)
     throw std::invalid_argument( "Address of provided to " + name + " over the limit\n" );
 
   return this->memory[addr];
@@ -20,7 +20,7 @@ uint8_t Memory::read(uint16_t addr){
     @param data uint8_t  byte to write
 */
 void Memory::write(uint16_t addr, uint8_t data){
-  if(addr >= size)
+  if(addr >= size_addr)
     throw std::invalid_argument( "Address of provided to " + name + " over the limit\n" );
 
   this->memory[addr] = data;
@@ -31,10 +31,8 @@ void Memory::write(uint16_t addr, uint8_t data){
 
     @param size uint8_t  number of bytes in the memory
 */
-Memory::Memory(std::string name, uint32_t size){
-  this->name = name;
-  this->size = size;
-  this->memory.resize(size);
-  for(int i = 0; i < size; i++) this->memory[i] = 0;
+Memory::Memory(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
+  this->memory.resize(this->size_addr);
+  for(int i = 0; i < this->size_addr; i++) this->memory[i] = 0;
 }
 
