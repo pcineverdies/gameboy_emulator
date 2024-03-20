@@ -9,6 +9,13 @@
 
 class Bus : public Bus_obj{
 
+  /*
+   * By having an array of pointer to abstract objects, we can
+   * keep track of all the objects attached to the bus. Each object
+   * will contain its starting address and size. This is not accurate
+   * with respsect to the architecture, but just a way to keep track
+   * of the information.
+   * */
   std::vector<Bus_obj*> bus_objects;
 
 public:

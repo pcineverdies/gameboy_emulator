@@ -5,6 +5,7 @@
 
     @param addr uint16_t address to read
     @return uint8_t read byte
+
 */
 uint8_t Memory::read(uint16_t addr){
   if(addr >= size_addr)
@@ -18,6 +19,7 @@ uint8_t Memory::read(uint16_t addr){
 
     @param addr uint16_t address to use
     @param data uint8_t  byte to write
+
 */
 void Memory::write(uint16_t addr, uint8_t data){
   if(addr >= size_addr)
@@ -29,7 +31,10 @@ void Memory::write(uint16_t addr, uint8_t data){
 /** Memory::Memory
     Memory constructor
 
-    @param size uint8_t  number of bytes in the memory
+    @param name std::string Name of the object to create
+    @param init_addr uint16_t Initial address of the object once connected to the bus
+    @param size uint16_t Size of the addressable space of the object
+
 */
 Memory::Memory(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
   this->memory.resize(this->size_addr);

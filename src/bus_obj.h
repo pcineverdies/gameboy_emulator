@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+// Pure virtual class for objects connected
+// to a bus.
 class Bus_obj {
 
 protected:
@@ -16,6 +18,7 @@ public:
   Bus_obj(std::string, uint16_t, uint16_t);
   uint16_t get_size();
   uint16_t get_init_addr();
+  uint16_t get_last_addr();
   virtual uint8_t read(uint16_t) = 0;
   virtual void write(uint16_t, uint8_t) = 0;
   virtual ~Bus_obj() {};
