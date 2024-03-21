@@ -276,7 +276,7 @@ void Registers::set_Z(uint8_t data){
 
 */
 uint8_t Registers::get_N(){
-  return read_F() & (1 << 7) ? 1 : 0;
+  return read_F() & (1 << 6) ? 1 : 0;
 }
 
 /** Registers::set_N
@@ -297,7 +297,7 @@ void Registers::set_N(uint8_t data){
 
 */
 uint8_t Registers::get_H(){
-  return read_F() & (1 << 7) ? 1 : 0;
+  return read_F() & (1 << 5) ? 1 : 0;
 }
 
 /** Registers::set_H
@@ -318,7 +318,7 @@ void Registers::set_H(uint8_t data){
 
 */
 uint8_t Registers::get_C(){
-  return read_F() & (1 << 7) ? 1 : 0;
+  return read_F() & (1 << 4) ? 1 : 0;
 }
 
 /** Registers::set_C
