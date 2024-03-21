@@ -43,6 +43,10 @@ class Cpu{
   uint8_t read_x8(Bus*, uint8_t);
   void    write_x8(Bus*, uint8_t, uint8_t);
   bool    get_jump_condition(uint8_t);
+  uint8_t get_xx(uint8_t);
+  uint8_t get_yyy(uint8_t);
+  uint8_t get_zzz(uint8_t);
+  bool   check_mask(uint8_t, std::string);
 
 public:
 
