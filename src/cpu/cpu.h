@@ -1,6 +1,7 @@
 #ifndef __CPU_H
 #define __CPU_H
 
+#include "opcode.h"
 #include "registers.h"
 #include "../bus.h"
 #include <stdexcept>
@@ -58,7 +59,6 @@ class Cpu{
   uint8_t xor_x8(uint8_t, uint8_t);
   uint8_t or_x8(uint8_t, uint8_t);
   uint8_t cp_x8(uint8_t, uint8_t);
-  void    daa_instr();
 
 public:
 

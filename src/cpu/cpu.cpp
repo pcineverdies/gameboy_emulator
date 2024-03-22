@@ -43,7 +43,7 @@ void Cpu::step(Bus* bus){
     _opcode = fetch(bus);
   }
 
-  if(_opcode == 0xcb){
+  if(_opcode == CB_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }

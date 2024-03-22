@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "opcode.h"
 
 /** CPU::execute_invalid
     Check whether the provided instruction is invalid
@@ -12,7 +13,7 @@ void Cpu::execute_invalid(Bus* bus){
     _opcode == 0xd3 or _opcode == 0xe3 or _opcode == 0xe4 or _opcode == 0xf4 or
     _opcode == 0xdb or _opcode == 0xeb or _opcode == 0xec or _opcode == 0xfc or
     _opcode == 0xdd or _opcode == 0xed or _opcode == 0xfd
-  ) throw std::runtime_error("Parsed invalid ");
+  ) throw std::runtime_error("Parsed invalid opcode");
 }
 
 /** CPU::execute_x8_lsm
@@ -29,23 +30,23 @@ void Cpu::execute_x8_lsm(Bus* bus){
   uint8_t yyy = get_yyy(_opcode);
   uint8_t zzz = get_zzz(_opcode);
 
-  if(check_mask(_opcode, "00xxx110")){
+  if(check_mask(_opcode, LD_r_U8_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
     else if(_state == State::STATE_2){
       _u8 = fetch(bus);
-      write_x8(bus, yyy, _u8);
-      if(yyy == 6) _state = State::STATE_3;
-      else         _state = State::STATE_1;
+      if(yyy == LH_INDEX) _state = State::STATE_3;
+      else                 write_x8(bus, yyy, _u8), _state = State::STATE_1;
     }
     else if(_state == State::STATE_3){
+      write_x8(bus, yyy, _u8);
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction LD");
+    else std::runtime_error("Invalid state reached for instruction LD_r_U8");
   }
 
-  if(check_mask(_opcode, "00xxx010")){
+  if(check_mask(_opcode, LD_m_A_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -60,25 +61,25 @@ void Cpu::execute_x8_lsm(Bus* bus){
       if(yyy == 0b111) registers.write_A(bus->read(registers.read_HL_d()));
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction LD");
+    else std::runtime_error("Invalid state reached for instruction LD_m_A");
   }
 
-  if(xx == 0b01 and _opcode!= 0x76){
+  if(xx == LD_r_r and _opcode!= HALT_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
     else if(_state == State::STATE_2){
-      write_x8(bus, yyy, read_x8(bus, zzz));
-      if(yyy == 6 or zzz == 6) _state = State::STATE_3;
-      else                     _state = State::STATE_1;
+      if(yyy == LH_INDEX or zzz == LH_INDEX)      _state = State::STATE_3;
+      else write_x8(bus, yyy, read_x8(bus, zzz)), _state = State::STATE_1;
     }
     else if(_state == State::STATE_3){
+      write_x8(bus, yyy, read_x8(bus, zzz));
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction LD");
+    else std::runtime_error("Invalid state reached for instruction LD_r_r");
   }
 
-  if(check_mask(_opcode, "111x0000")){
+  if(check_mask(_opcode, LD_ff00_u8_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -91,10 +92,10 @@ void Cpu::execute_x8_lsm(Bus* bus){
       if(yyy == 0b111) registers.write_A(bus->read(0xff00 + _u8));
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction LD");
+    else std::runtime_error("Invalid state reached for instruction LD_ff00_u8");
   }
 
-  if(check_mask(_opcode, "111x0010")){
+  if(check_mask(_opcode, LD_ff00_C_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -106,7 +107,7 @@ void Cpu::execute_x8_lsm(Bus* bus){
     else std::runtime_error("Invalid state reached for instruction LD");
   }
 
-  if(check_mask(_opcode, "111x1010")){
+  if(check_mask(_opcode, LD_u16_A_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -123,7 +124,7 @@ void Cpu::execute_x8_lsm(Bus* bus){
       if(yyy == 0b111) registers.write_A(bus->read(_u16));
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction LD");
+    else std::runtime_error("Invalid state reached for instruction LD_u16_A");
   }
 
 }
@@ -138,7 +139,7 @@ void Cpu::execute_x8_lsm(Bus* bus){
 */
 void Cpu::execute_x16_lsm(Bus* bus){
 
-  if(check_mask(_opcode, "00xx0001")){
+  if(check_mask(_opcode, LD_r16_u16_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -148,16 +149,16 @@ void Cpu::execute_x16_lsm(Bus* bus){
     }
     else if(_state == State::STATE_3){
       _u8_2 = fetch(bus);
-      if(_opcode == 0x01) registers.write_C(_u8), registers.write_B(_u8_2);
-      if(_opcode == 0x11) registers.write_E(_u8), registers.write_D(_u8_2);
-      if(_opcode == 0x21) registers.write_L(_u8), registers.write_H(_u8_2);
-      if(_opcode == 0x31) registers.SP = (_u8_2 << 8 | _u8);
+      if(_opcode == LD_BC_u16_OPCODE) registers.write_C(_u8), registers.write_B(_u8_2);
+      if(_opcode == LD_DE_u16_OPCODE) registers.write_E(_u8), registers.write_D(_u8_2);
+      if(_opcode == LD_HL_u16_OPCODE) registers.write_L(_u8), registers.write_H(_u8_2);
+      if(_opcode == LD_SP_u16_OPCODE) registers.SP = (_u8_2 << 8 | _u8);
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD");
   }
 
-  if(check_mask(_opcode, "11xx0001")){
+  if(check_mask(_opcode, POP_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -167,16 +168,16 @@ void Cpu::execute_x16_lsm(Bus* bus){
     }
     else if(_state == State::STATE_3){
       _u8_2 = bus->read(registers.SP++);
-      if(_opcode == 0x01) registers.write_C(_u8), registers.write_B(_u8_2);
-      if(_opcode == 0x11) registers.write_E(_u8), registers.write_D(_u8_2);
-      if(_opcode == 0x21) registers.write_L(_u8), registers.write_H(_u8_2);
-      if(_opcode == 0x31) registers.write_F(_u8), registers.write_A(_u8_2);
+      if(_opcode == POP_BC_OPCODE) registers.write_C(_u8), registers.write_B(_u8_2);
+      if(_opcode == POP_DE_OPCODE) registers.write_E(_u8), registers.write_D(_u8_2);
+      if(_opcode == POP_HL_OPCODE) registers.write_L(_u8), registers.write_H(_u8_2);
+      if(_opcode == POP_SP_OPCODE) registers.write_F(_u8), registers.write_A(_u8_2);
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction POP");
   }
 
-  if(check_mask(_opcode, "11xx0101")){
+  if(check_mask(_opcode, PUSH_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -184,23 +185,23 @@ void Cpu::execute_x16_lsm(Bus* bus){
       _state = State::STATE_3;
     }
     else if(_state == State::STATE_3){
-      if(_opcode == 0xc5) bus->write(--registers.SP, registers.read_B());
-      if(_opcode == 0xd5) bus->write(--registers.SP, registers.read_D());
-      if(_opcode == 0xe5) bus->write(--registers.SP, registers.read_H());
-      if(_opcode == 0xf5) bus->write(--registers.SP, registers.read_A());
+      if(_opcode == PUSH_BC_OPCODE) bus->write(--registers.SP, registers.read_B());
+      if(_opcode == PUSH_DE_OPCODE) bus->write(--registers.SP, registers.read_D());
+      if(_opcode == PUSH_HL_OPCODE) bus->write(--registers.SP, registers.read_H());
+      if(_opcode == PUSH_SP_OPCODE) bus->write(--registers.SP, registers.read_A());
       _state = State::STATE_4;
     }
     else if(_state == State::STATE_4){
-      if(_opcode == 0xc5) bus->write(--registers.SP, registers.read_C());
-      if(_opcode == 0xd5) bus->write(--registers.SP, registers.read_E());
-      if(_opcode == 0xe5) bus->write(--registers.SP, registers.read_L());
-      if(_opcode == 0xf5) bus->write(--registers.SP, registers.read_F());
+      if(_opcode == PUSH_BC_OPCODE) bus->write(--registers.SP, registers.read_C());
+      if(_opcode == PUSH_DE_OPCODE) bus->write(--registers.SP, registers.read_E());
+      if(_opcode == PUSH_HL_OPCODE) bus->write(--registers.SP, registers.read_L());
+      if(_opcode == PUSH_SP_OPCODE) bus->write(--registers.SP, registers.read_F());
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction PUSH");
   }
 
-  if(_opcode == 0x08){
+  if(_opcode == LD_u16_SP_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -223,7 +224,7 @@ void Cpu::execute_x16_lsm(Bus* bus){
     else std::runtime_error("Invalid state reached for instruction LD");
   }
 
-  if(_opcode == 0xf9){
+  if(_opcode == LD_SP_HL_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -235,6 +236,12 @@ void Cpu::execute_x16_lsm(Bus* bus){
   else std::runtime_error("Invalid state reached for instruction LD");
 }
 
+/** CPU::execute_x8_alu
+    Decodes and runs all the instructions in the category x8_alu
+
+    @param bus Bus* pointer to a bus to use for reading
+
+*/
 void Cpu::execute_x8_alu(Bus* bus){
 
   uint8_t xx  = get_xx(_opcode);
@@ -243,13 +250,13 @@ void Cpu::execute_x8_alu(Bus* bus){
   uint8_t A = registers.read_A();
 
   uint8_t (Cpu::*f_alu) (uint8_t, uint8_t) =
-    (yyy == 0x0) ? &Cpu::add_x8 : (yyy == 0x1) ? &Cpu::adc_x8 :
-    (yyy == 0x2) ? &Cpu::sub_x8 : (yyy == 0x3) ? &Cpu::sbc_x8 :
-    (yyy == 0x4) ? &Cpu::and_x8 : (yyy == 0x5) ? &Cpu::xor_x8 :
-    (yyy == 0x6) ? &Cpu::or_x8  :                &Cpu::cp_x8;
+    (yyy == ALU_ADD_YYY) ? &Cpu::add_x8 : (yyy == ALU_ADC_YYY) ? &Cpu::adc_x8 :
+    (yyy == ALU_SUB_YYY) ? &Cpu::sub_x8 : (yyy == ALU_SBC_YYY) ? &Cpu::sbc_x8 :
+    (yyy == ALU_AND_YYY) ? &Cpu::and_x8 : (yyy == ALU_XOR_YYY) ? &Cpu::xor_x8 :
+    (yyy == ALU_OR_YYY) ? &Cpu::or_x8   :                        &Cpu::cp_x8;
 
-  if(check_mask(_opcode, "00xxx10x")){
-    if(yyy != 6){
+  if(check_mask(_opcode, ALU_INC_DEC_OPCODE)){
+    if(yyy != LH_INDEX){
       _u8 = read_x8(bus, yyy);
       write_x8(bus, yyy, inc_dec_x8(_opcode, _u8));
     }
@@ -269,45 +276,55 @@ void Cpu::execute_x8_alu(Bus* bus){
     }
   }
 
-  if(_opcode == 0x07){
+  if(_opcode == RLCA_OPCODE){
     registers.set_C(A & 0x80); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
     registers.write_A(A << 1 | A >> 7);
   }
 
-  if(_opcode == 0x17){
+  if(_opcode == RLA_OPCODE){
     registers.write_A(A << 1 | registers.get_C());
     registers.set_C(A & 0x80); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
   }
 
-  if(_opcode == 0x27){
-    daa_instr();
+  if(_opcode == DAA_OPCODE){
+    uint8_t correction_value = 0;
+
+    if(registers.get_H() or (registers.get_N() == 0 and (registers.read_A() & 0xf) > 9))
+      correction_value |= 0x06;
+    if(registers.get_C() or (registers.get_N() == 0 and (registers.read_A() > 0x99)))
+      correction_value |= 0x60, registers.set_C(1);
+
+    registers.write_A(registers.read_A() + (registers.get_N() ? -correction_value : correction_value));
+
+    registers.set_H(0);
+    registers.set_Z(registers.read_A() == 0);
   }
 
-  if(_opcode == 0x37){
+  if(_opcode == SCF_OPCODE){
     registers.set_C(1); registers.set_H(0); registers.set_N(0);
   }
 
-  if(_opcode == 0x0f){
+  if(_opcode == RRCA_OPCODE){
     registers.write_A(A >> 1 | A << 7);
     registers.set_C(A & 0x01); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
   }
 
-  if(_opcode == 0x1f){
+  if(_opcode == RRA_OPCODE){
     registers.write_A(A >> 1 | registers.get_C() << 7);
     registers.set_C(A & 0x01); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
   }
 
-  if(_opcode == 0x2f){
+  if(_opcode == CPL_OPCODE){
     registers.write_A(~A);
     registers.set_H(0); registers.set_N(0);
   }
 
-  if(_opcode == 0x3f){
+  if(_opcode == CCF_OPCODE){
     registers.set_C(registers.get_C() == 1 ? 0 : 1); registers.set_H(0); registers.set_N(0);
   }
 
-  if(check_mask(_opcode, "10xxxxxx")){
-    if(zzz != 6){
+  if(check_mask(_opcode, ALU_OPCODE)){
+    if(zzz != LH_INDEX){
       _u8 = read_x8(bus, zzz);
       registers.write_A((this->*f_alu)(registers.read_A(), _u8));
     }
@@ -324,7 +341,7 @@ void Cpu::execute_x8_alu(Bus* bus){
     }
   }
 
-  if(check_mask(_opcode, "11xxx110")){
+  if(check_mask(_opcode, ALU_u8_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -333,42 +350,48 @@ void Cpu::execute_x8_alu(Bus* bus){
       registers.write_A((this->*f_alu)(registers.read_A(), _u8));
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction ALU");
+    else std::runtime_error("Invalid state reached for instruction ALU_u8");
   }
 
 }
 
+/** CPU::execute_x16_alu
+    Decodes and runs all the instructions in the category x16_alu
+
+    @param bus Bus* pointer to a bus to use for reading
+
+*/
 void Cpu::execute_x16_alu(Bus* bus){
 
-  if(check_mask(_opcode, "00xxx011")){
+  if(check_mask(_opcode, ALU_16_INC_DEC_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
     else if(_state == State::STATE_2){
-      if     (_opcode == 0x03) registers.write_BC(registers.read_BC() + 1);
-      else if(_opcode == 0x12) registers.write_DE(registers.read_DE() + 1);
-      else if(_opcode == 0x23) registers.write_HL(registers.read_HL() + 1);
-      else if(_opcode == 0x33) registers.SP +=1;
-      else if(_opcode == 0x0B) registers.write_BC(registers.read_BC() - 1);
-      else if(_opcode == 0x1B) registers.write_DE(registers.read_DE() - 1);
-      else if(_opcode == 0x2B) registers.write_HL(registers.read_HL() - 1);
-      else if(_opcode == 0x3B) registers.SP -= 1;
+      if     (_opcode == INC_BC_OPCODE) registers.write_BC(registers.read_BC() + 1);
+      else if(_opcode == INC_DE_OPCODE) registers.write_DE(registers.read_DE() + 1);
+      else if(_opcode == INC_HL_OPCODE) registers.write_HL(registers.read_HL() + 1);
+      else if(_opcode == INC_SP_OPCODE) registers.SP +=1;
+      else if(_opcode == DEC_BC_OPCODE) registers.write_BC(registers.read_BC() - 1);
+      else if(_opcode == DEC_DE_OPCODE) registers.write_DE(registers.read_DE() - 1);
+      else if(_opcode == DEC_HL_OPCODE) registers.write_HL(registers.read_HL() - 1);
+      else if(_opcode == DEC_SP_OPCODE) registers.SP -= 1;
       _state = State::STATE_1;
     }
-    else std::runtime_error("Invalid state reached for instruction INC/DEC");
+    else std::runtime_error("Invalid state reached for instruction ALU_16_INC_DEC");
   }
 
-  if(check_mask(_opcode, "00xx1001")){
+  if(check_mask(_opcode, ALU_16_r_r_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
     else if(_state == State::STATE_2){
       _u16 = registers.read_HL();
 
-      if(_opcode == 0x09) _u16_2 = registers.read_BC();
-      if(_opcode == 0x19) _u16_2 = registers.read_DE();
-      if(_opcode == 0x29) _u16_2 = registers.read_HL();
-      if(_opcode == 0x39) _u16_2 = registers.SP;
+      if(_opcode == ADD_HL_BC_OPCODE) _u16_2 = registers.read_BC();
+      if(_opcode == ADD_HL_DE_OPCODE) _u16_2 = registers.read_DE();
+      if(_opcode == ADD_HL_HL_OPCODE) _u16_2 = registers.read_HL();
+      if(_opcode == ADD_HL_SP_OPCODE) _u16_2 = registers.SP;
 
       registers.set_N(0);
       registers.set_H((_u16 & 0xfff) + (_u16_2 & 0xfff) > 0xfff);
@@ -380,7 +403,7 @@ void Cpu::execute_x16_alu(Bus* bus){
     }
     else std::runtime_error("Invalid state reached for instruction ADD");
   }
-  if(_opcode == 0xe8 or _opcode == 0xf8){
+  if(_opcode == ADD_SP_i8_OPCODE or _opcode == LD_HL_SP_i8_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -395,8 +418,8 @@ void Cpu::execute_x16_alu(Bus* bus){
       registers.set_H((_u16 & 0xf) + (_u16_2 & 0xf) > 0xf);
       registers.set_C((_u16 & 0xff) + (_u16_2 & 0xff) > 0xff);
 
-      if(_opcode == 0xe8) registers.SP = _u16 + _u16_2, _state = State::STATE_4;
-      else                registers.write_HL(_u16 + _u16_2), _state = State::STATE_1;
+      if(_opcode == ADD_SP_i8_OPCODE) registers.SP = _u16 + _u16_2, _state = State::STATE_4;
+      else                            registers.write_HL(_u16 + _u16_2), _state = State::STATE_1;
 
     }
     else if(_state == State::STATE_4){
@@ -408,7 +431,7 @@ void Cpu::execute_x16_alu(Bus* bus){
 
 void Cpu::execute_control_br(Bus* bus ){
 
-  if(check_mask(_opcode, "001xx000")){
+  if(check_mask(_opcode, JR_COND_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -427,7 +450,7 @@ void Cpu::execute_control_br(Bus* bus ){
 
   }
 
-  if(_opcode == 0x18){
+  if(_opcode == JR_i8_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -444,7 +467,7 @@ void Cpu::execute_control_br(Bus* bus ){
     else std::runtime_error("Invalid state reached for instruction JR cond");
   }
 
-  if(check_mask(_opcode, "110xx000")){
+  if(check_mask(_opcode, RET_COND_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -467,7 +490,7 @@ void Cpu::execute_control_br(Bus* bus ){
     else std::runtime_error("Invalid state reached for instruction RET cond");
   }
 
-  if(check_mask(_opcode, "110xx010") or _opcode == 0xc3){
+  if(check_mask(_opcode, JP_COND_OPCODE) or _opcode == JP_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -477,8 +500,8 @@ void Cpu::execute_control_br(Bus* bus ){
     }
     else if(_state == State::STATE_3){
       _u16 = _u16 | (fetch(bus) << 8);
-      if(get_jump_condition(_opcode) or _opcode == 0xc3) _state = State::STATE_4;
-      else                                               _state = State::STATE_1;
+      if(get_jump_condition(_opcode) or _opcode == JP_OPCODE) _state = State::STATE_4;
+      else                                                    _state = State::STATE_1;
     }
     else if(_state == State::STATE_4){
       registers.PC = _u16;
@@ -487,7 +510,7 @@ void Cpu::execute_control_br(Bus* bus ){
     else std::runtime_error("Invalid state reached for instruction JP cond");
   }
 
-  if(check_mask(_opcode, "110xx100") or _opcode == 0xcd){
+  if(check_mask(_opcode, CALL_COND_OPCODE) or _opcode == CALL_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -497,8 +520,8 @@ void Cpu::execute_control_br(Bus* bus ){
     }
     else if(_state == State::STATE_3){
       _u16 = _u16 | (fetch(bus) << 8);
-      if(get_jump_condition(_opcode) or _opcode == 0xcd) _state = State::STATE_4;
-      else                                               _state = State::STATE_1;
+      if(get_jump_condition(_opcode) or _opcode == CALL_OPCODE) _state = State::STATE_4;
+      else                                                      _state = State::STATE_1;
     }
     else if(_state == State::STATE_4){
       _state = State::STATE_5;
@@ -515,7 +538,7 @@ void Cpu::execute_control_br(Bus* bus ){
     else std::runtime_error("Invalid state reached for instruction CALL cond");
   }
 
-  if(check_mask(_opcode, "11xxx111")){
+  if(check_mask(_opcode, RST_OPCODE)){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -535,7 +558,7 @@ void Cpu::execute_control_br(Bus* bus ){
     else std::runtime_error("Invalid state reached for instruction CALL cond");
   }
 
-  if(_opcode == 0xc9 or _opcode == 0xd9){
+  if(_opcode == RET_OPCODE or _opcode == RETI_OPCODE){
     if(_state == State::STATE_1){
       _state = State::STATE_2;
     }
@@ -559,6 +582,12 @@ void Cpu::execute_control_br(Bus* bus ){
   }
 }
 
+/** CPU::execute_control_misc
+    Decodes and runs all the instructions in the category control_misc
+
+    @param bus Bus* pointer to a bus to use for reading
+
+*/
 void Cpu::execute_control_misc(Bus* bus){}
 
 /** CPU::execute_x8_rsb
@@ -575,49 +604,58 @@ void Cpu::execute_x8_rsb(Bus* bus){
   uint8_t u8 = read_x8(bus, zzz);
 
   // Bit N and H are always reset in instructions which are not BIT, RES and SET
-  if(check_mask(_opcode, "00xxxxxx")) registers.set_H(0), registers.set_N(0);
+  if(check_mask(_opcode, CB_BLOCK0_OPCODE)) registers.set_H(0), registers.set_N(0);
 
-  if(check_mask(_opcode, "00000xxx")){ // RLC instruction
+  if(check_mask(_opcode, CB_RLC_OPCODE)){
     registers.set_C(u8 & 0x80); registers.set_Z(u8 == 0);
     write_x8(bus, zzz, (u8 << 1) | (u8 >> 7));
   }
-  if(check_mask(_opcode, "00001xxx")){   //RRC
+  if(check_mask(_opcode, CB_RRC_OPCODE)){
     registers.set_C(u8 & 0x01); registers.set_Z(u8 == 0);
     write_x8(bus, zzz, (u8 >> 1) | (u8 << 7));
   }
-  if(check_mask(_opcode, "00010xxx")){   // RL
+  if(check_mask(_opcode, CB_RL_OPCODE)){
     write_x8(bus, zzz, (u8 << 1) | (registers.get_C()));
     registers.set_Z(((u8 << 1) | registers.get_C()) == 0); registers.set_C(u8 & 0x80);
   }
-  if(check_mask(_opcode, "00011xxx")){ // RR
+  if(check_mask(_opcode, CB_RR_OPCODE)){
     write_x8(bus, zzz, (u8 >> 1) | (registers.get_C() << 7));
     registers.set_Z(((u8 >> 1) | (registers.get_C() << 7)) == 0); registers.set_C(u8 & 0x01);
   }
-  if(check_mask(_opcode, "00100xxx")){ // SLA
+  if(check_mask(_opcode, CB_SLA_OPCODE)){
     registers.set_C(u8 & 0x80); registers.set_Z((u8 << 1) == 0);
     write_x8(bus, zzz, (u8 << 1));
   }
-  if(check_mask(_opcode, "00101xxx")){  // SRA
+  if(check_mask(_opcode, CB_SRA_OPCODE)){
     write_x8(bus, zzz, (u8 & 0x80) | (u8 >> 1));
     registers.set_Z(((u8 & 0x80) | (u8 >> 1)) == 0); registers.set_C(u8 & 0x01);
   }
-  if(check_mask(_opcode, "00110xxx")){ // SWAP
+  if(check_mask(_opcode, CB_SWAP_OPCODE)){
     registers.set_Z(u8 == 0), registers.set_C(0);
     write_x8(bus, zzz, (u8 << 4) | (u8 >> 4));
   }
-  if(check_mask(_opcode, "00111xxx")){  // SRL
+  if(check_mask(_opcode, CB_SRL_OPCODE)){
     registers.set_C(u8 & 0x01); registers.set_Z((u8 >> 1) == 0);
     write_x8(bus, zzz, (u8 >> 1));
   }
-  if(check_mask(_opcode, "01yyyxxx")){  // BIT
+  if(check_mask(_opcode, CB_BIT_OPCODE)){
     registers.set_H(1), registers.set_N(0);
     registers.set_Z(u8 & (1 << yyy));
   }
-  if(check_mask(_opcode, "1zyyyxxx")){ // RES/SET
+  if(check_mask(_opcode, CB_SET_RES_OPCODE)){
     write_x8(bus, zzz, (_opcode & 0x40) ? (u8 | (1 << yyy)) : (u8 & ~(1 << yyy)));
   }
 }
 
+/** CPU::inc_dec_x8
+    Implement the ALU INC/DEC operations on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param opcode uint8_t opcode of the instruction, to distinguish between inc and dec
+    @param u8 uint8_t operands to increment or decrement
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::inc_dec_x8(uint8_t opcode, uint8_t u8){
   registers.set_Z(opcode & 1 ? u8 - 1 == 0 : u8 + 1 == 0);
   registers.set_N(opcode & 1 ? 1 : 0);
@@ -626,6 +664,15 @@ uint8_t Cpu::inc_dec_x8(uint8_t opcode, uint8_t u8){
 
 }
 
+/** CPU::add_x8
+    Implement the ALU ADD operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::add_x8(uint8_t op1, uint8_t op2){
   uint16_t res = op1 + op2;
   registers.set_Z(res == 0);
@@ -635,6 +682,15 @@ uint8_t Cpu::add_x8(uint8_t op1, uint8_t op2){
   return res & 0x00ff;
 }
 
+/** CPU::adc_x8
+    Implement the ALU ADC operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::adc_x8(uint8_t op1, uint8_t op2){
   uint16_t res = op1 + op2 + registers.get_C();
   registers.set_Z(res == 0);
@@ -644,6 +700,15 @@ uint8_t Cpu::adc_x8(uint8_t op1, uint8_t op2){
   return res & 0x00ff;
 }
 
+/** CPU::sub_x8
+    Implement the ALU SUB operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::sub_x8(uint8_t op1, uint8_t op2){
   uint8_t res = op1 - op2;
   registers.set_Z(res == 0);
@@ -653,6 +718,15 @@ uint8_t Cpu::sub_x8(uint8_t op1, uint8_t op2){
   return res;
 }
 
+/** CPU::sbc_x8
+    Implement the ALU SBC operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::sbc_x8(uint8_t op1, uint8_t op2){
   uint8_t res = op1 - (op2 + registers.get_C());
   registers.set_Z(res == 0);
@@ -662,6 +736,15 @@ uint8_t Cpu::sbc_x8(uint8_t op1, uint8_t op2){
   return res;
 }
 
+/** CPU::and_x8
+    Implement the ALU AND operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::and_x8(uint8_t op1, uint8_t op2){
   uint8_t res = op1 & op2;
   registers.set_Z(res == 0);
@@ -669,6 +752,15 @@ uint8_t Cpu::and_x8(uint8_t op1, uint8_t op2){
   return res;
 }
 
+/** CPU::xor_x8
+    Implement the ALU XOR operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::xor_x8(uint8_t op1, uint8_t op2){
   uint8_t res = op1 ^ op2;
   registers.set_Z(res == 0);
@@ -677,6 +769,15 @@ uint8_t Cpu::xor_x8(uint8_t op1, uint8_t op2){
 
 }
 
+/** CPU::or_x8
+    Implement the ALU OR operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::or_x8(uint8_t op1, uint8_t op2){
   uint8_t res = op1 | op2;
   registers.set_Z(res == 0);
@@ -684,24 +785,19 @@ uint8_t Cpu::or_x8(uint8_t op1, uint8_t op2){
   return res;
 }
 
+/** CPU::cp_x8
+    Implement the ALU CP operation on operands on 8 bits.
+    Takes care of updating the flags.
+
+    @param op1 uint8_t First operand to use
+    @param op2 uint8_t Second operand to use
+    @return uint8_t result of the operation
+
+*/
 uint8_t Cpu::cp_x8(uint8_t op1, uint8_t op2){
   registers.set_Z(op1 == op2);
   registers.set_N(1);
   registers.set_H((op1 & 0xf) < (op2 & 0xf));
   registers.set_C(op1 < op2);
   return op1;
-}
-
-void Cpu::daa_instr(){
-  uint8_t correction_value = 0;
-
-  if(registers.get_H() or (registers.get_N() == 0 and (registers.read_A() & 0xf) > 9))
-    correction_value |= 0x06;
-  if(registers.get_C() or (registers.get_N() == 0 and (registers.read_A() > 0x99)))
-    correction_value |= 0x60, registers.set_C(1);
-
-  registers.write_A(registers.read_A() + (registers.get_N() ? -correction_value : correction_value));
-
-  registers.set_H(0);
-  registers.set_Z(registers.read_A() == 0);
 }
