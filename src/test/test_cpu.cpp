@@ -70,8 +70,164 @@ int main(){
 
     assert(cpu.get_registers().read_A() == 0xee);
 
+    printf("-> TEST1 terminated succesfully\n");
 
   }
 
+  {
 
+    // TEST 2
+    Bus    bus("Bus", 0, 0xffff);
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    Memory HRAM("ROM_00", 0xff00, 0x0100);
+    Cpu    cpu;
+    bus.add_to_bus(&ROM_00);
+    bus.add_to_bus(&HRAM);
+
+    bus.write(0x100, 0x1e);
+    bus.write(0x101, 0xf0);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_E() == 0xf0);
+
+    bus.write(0x102, 0x1c);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_E() == 0xf1);
+
+    bus.write(0x103, 0x1d);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_E() == 0xf0);
+
+    bus.write(0x104, 0x35);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    assert(bus.read(cpu.get_registers().read_HL()) == 0xff);
+
+    bus.write(0x105, 0x2f);
+    cpu.step(&bus);
+    assert(cpu.get_registers().read_A() == 0xff);
+
+    bus.write(0x106, 0x3e);
+    bus.write(0x107, 0x2f);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    assert(cpu.get_registers().read_A() == 0x2f);
+
+    bus.write(0x108, 0x07);
+    cpu.step(&bus);
+    assert(cpu.get_registers().read_A() == 0b01011110);
+
+    printf("-> TEST2 terminated succesfully\n");
+  }
+
+  {
+
+    // TEST 3
+    Bus    bus("Bus", 0, 0xffff);
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    Memory HRAM("ROM_00", 0xff00, 0x0100);
+    Cpu    cpu;
+    bus.add_to_bus(&ROM_00);
+    bus.add_to_bus(&HRAM);
+
+    bus.write(0x100, 0x3e);
+    bus.write(0x101, 0xca);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0xca);
+
+    bus.write(0x102, 0x0e);
+    bus.write(0x103, 0xf0);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_C() == 0xf0);
+
+    bus.write(0x104, 0xB9);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0xca);
+    assert(cpu.get_registers().get_Z() == 0);
+    assert(cpu.get_registers().get_N() == 1);
+    assert(cpu.get_registers().get_H() == 0);
+    assert(cpu.get_registers().get_C() == 1);
+
+    bus.write(0x105, 0xd6);
+    bus.write(0x106, 0xff);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0xcb);
+    assert(cpu.get_registers().get_Z() == 0);
+    assert(cpu.get_registers().get_N() == 1);
+    assert(cpu.get_registers().get_H() == 1);
+    assert(cpu.get_registers().get_C() == 1);
+
+    bus.write(0x107, 0xd6);
+    bus.write(0x108, 0xcb);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x00);
+    assert(cpu.get_registers().get_Z() == 1);
+    assert(cpu.get_registers().get_N() == 1);
+    assert(cpu.get_registers().get_H() == 0);
+    assert(cpu.get_registers().get_C() == 0);
+
+    printf("-> TEST3 terminated succesfully\n");
+  }
+
+  {
+
+    // TEST 4
+    Bus    bus("Bus", 0, 0xffff);
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    Memory HRAM("ROM_00", 0xff00, 0x0100);
+    Cpu    cpu;
+    bus.add_to_bus(&ROM_00);
+    bus.add_to_bus(&HRAM);
+
+    bus.write(0x100, 0x3e);
+    bus.write(0x101, 0x16);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x16);
+
+    bus.write(0x102, 0x2e);
+    bus.write(0x103, 0x19);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_L() == 0x19);
+
+    bus.write(0x104, 0x85);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x2f);
+
+    bus.write(0x105, 0x27);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x35);
+
+    bus.write(0x106, 0x95);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x1c);
+
+    bus.write(0x107, 0x27);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_A() == 0x16);
+
+    printf("-> TEST4 terminated succesfully\n");
+  }
+
+  printf("-> All test terminated succesfully\n");
 }
