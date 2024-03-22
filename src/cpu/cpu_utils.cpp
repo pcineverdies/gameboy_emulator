@@ -86,15 +86,6 @@ Registers Cpu::get_registers(){
   return registers;
 }
 
-void Cpu::print_state(){
-  if(_state == State::STATE_1) std::cout << "STATE 1" << std::endl;
-  if(_state == State::STATE_2) std::cout << "STATE 2" << std::endl;
-  if(_state == State::STATE_3) std::cout << "STATE 3" << std::endl;
-  if(_state == State::STATE_4) std::cout << "STATE 4" << std::endl;
-  if(_state == State::STATE_5) std::cout << "STATE 5" << std::endl;
-  if(_state == State::STATE_6) std::cout << "STATE 6" << std::endl;
-}
-
 /** CPU::read_x8
     The following operation is performed:
       if index is 0, return the value of B
@@ -142,3 +133,4 @@ void Cpu::write_x8(Bus* bus, uint8_t index, uint8_t data){
   else           bus->write(registers.read_HL(), data);
 
 }
+

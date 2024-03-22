@@ -235,7 +235,108 @@ void Cpu::execute_x16_lsm(Bus* bus){
   else std::runtime_error("Invalid state reached for instruction LD");
 }
 
-void Cpu::execute_x8_alu(Bus* bus){}
+void Cpu::execute_x8_alu(Bus* bus){
+
+  uint8_t xx  = get_xx(_opcode);
+  uint8_t yyy = get_yyy(_opcode);
+  uint8_t zzz = get_zzz(_opcode);
+  uint8_t A = registers.read_A();
+
+  uint8_t (Cpu::*f_alu) (uint8_t, uint8_t) =
+    (yyy == 0x0) ? &Cpu::add_x8 : (yyy == 0x1) ? &Cpu::adc_x8 :
+    (yyy == 0x2) ? &Cpu::sub_x8 : (yyy == 0x3) ? &Cpu::sbc_x8 :
+    (yyy == 0x4) ? &Cpu::and_x8 : (yyy == 0x5) ? &Cpu::xor_x8 :
+    (yyy == 0x6) ? &Cpu::or_x8  :                &Cpu::cp_x8;
+
+  if(check_mask(_opcode, "00xxx10x")){
+    if(yyy != 6){
+      _u8 = read_x8(bus, yyy);
+      write_x8(bus, yyy, inc_dec_x8(_opcode, _u8));
+    }
+    else{
+      if(_state == State::STATE_1){
+        _state = State::STATE_2;
+      }
+      else if(_state == State::STATE_2){
+        _u8 = read_x8(bus, yyy);
+        _state = State::STATE_3;
+      }
+      else if(_state == State::STATE_3){
+        write_x8(bus, yyy, inc_dec_x8(_opcode, _u8));
+        _state = State::STATE_1;
+      }
+      else std::runtime_error("Invalid state reached for instruction INC");
+    }
+  }
+
+  if(_opcode == 0x07){
+    registers.set_C(A & 0x80); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
+    registers.write_A(A << 1 | A >> 7);
+  }
+
+  if(_opcode == 0x17){
+    registers.write_A(A << 1 | registers.get_C());
+    registers.set_C(A & 0x80); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
+  }
+
+  if(_opcode == 0x27){
+    daa_instr();
+  }
+
+  if(_opcode == 0x37){
+    registers.set_C(1); registers.set_H(0); registers.set_N(0);
+  }
+
+  if(_opcode == 0x0f){
+    registers.write_A(A >> 1 | A << 7);
+    registers.set_C(A & 0x01); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
+  }
+
+  if(_opcode == 0x1f){
+    registers.write_A(A >> 1 | registers.get_C() << 7);
+    registers.set_C(A & 0x01); registers.set_H(0); registers.set_N(0); registers.set_Z(0);
+  }
+
+  if(_opcode == 0x2f){
+    registers.write_A(~A);
+    registers.set_H(0); registers.set_N(0);
+  }
+
+  if(_opcode == 0x3f){
+    registers.set_C(registers.get_C() == 1 ? 0 : 1); registers.set_H(0); registers.set_N(0);
+  }
+
+  if(check_mask(_opcode, "10xxxxxx")){
+    if(zzz != 6){
+      _u8 = read_x8(bus, zzz);
+      registers.write_A((this->*f_alu)(registers.read_A(), _u8));
+    }
+    else{
+      if(_state == State::STATE_1){
+        _state = State::STATE_2;
+      }
+      else if(_state == State::STATE_2){
+        _u8 = read_x8(bus, zzz);
+        registers.write_A((this->*f_alu)(registers.read_A(), _u8));
+        _state = State::STATE_1;
+      }
+      else std::runtime_error("Invalid state reached for instruction ALU");
+    }
+  }
+
+  if(check_mask(_opcode, "11xxx110")){
+    if(_state == State::STATE_1){
+      _state = State::STATE_2;
+    }
+    else if(_state == State::STATE_2){
+      _u8 = fetch(bus);
+      registers.write_A((this->*f_alu)(registers.read_A(), _u8));
+      _state = State::STATE_1;
+    }
+    else std::runtime_error("Invalid state reached for instruction ALU");
+  }
+
+}
 
 void Cpu::execute_x16_alu(Bus* bus){
 
@@ -517,3 +618,90 @@ void Cpu::execute_x8_rsb(Bus* bus){
   }
 }
 
+uint8_t Cpu::inc_dec_x8(uint8_t opcode, uint8_t u8){
+  registers.set_Z(opcode & 1 ? u8 - 1 == 0 : u8 + 1 == 0);
+  registers.set_N(opcode & 1 ? 1 : 0);
+  registers.set_H((u8 & 0xf) + (opcode & 1 ? -1 : 1) > 0xf);
+  return (opcode & 1 ? u8 - 1 : u8 + 1);
+
+}
+
+uint8_t Cpu::add_x8(uint8_t op1, uint8_t op2){
+  uint16_t res = op1 + op2;
+  registers.set_Z(res == 0);
+  registers.set_N(0);
+  registers.set_H((op1 & 0xf) + (op2 & 0xf) > 0xf);
+  registers.set_C(res & 0x0100);
+  return res & 0x00ff;
+}
+
+uint8_t Cpu::adc_x8(uint8_t op1, uint8_t op2){
+  uint16_t res = op1 + op2 + registers.get_C();
+  registers.set_Z(res == 0);
+  registers.set_N(0);
+  registers.set_H((op1 & 0xf) + (op2 & 0xf) + registers.get_C() > 0xf);
+  registers.set_C(res & 0x0100);
+  return res & 0x00ff;
+}
+
+uint8_t Cpu::sub_x8(uint8_t op1, uint8_t op2){
+  uint8_t res = op1 - op2;
+  registers.set_Z(res == 0);
+  registers.set_N(1);
+  registers.set_H((op1 & 0xf) < (op2 & 0xf));
+  registers.set_C(op1 < op2);
+  return res;
+}
+
+uint8_t Cpu::sbc_x8(uint8_t op1, uint8_t op2){
+  uint8_t res = op1 - (op2 + registers.get_C());
+  registers.set_Z(res == 0);
+  registers.set_N(1);
+  registers.set_H((op1 & 0xf) < ((op2 + registers.get_C()) & 0xf));
+  registers.set_C((uint16_t)op1 > (uint16_t)(op2 + registers.get_C()));
+  return res;
+}
+
+uint8_t Cpu::and_x8(uint8_t op1, uint8_t op2){
+  uint8_t res = op1 & op2;
+  registers.set_Z(res == 0);
+  registers.set_N(0); registers.set_H(1); registers.set_C(0);
+  return res;
+}
+
+uint8_t Cpu::xor_x8(uint8_t op1, uint8_t op2){
+  uint8_t res = op1 ^ op2;
+  registers.set_Z(res == 0);
+  registers.set_N(0); registers.set_H(0); registers.set_C(0);
+  return res;
+
+}
+
+uint8_t Cpu::or_x8(uint8_t op1, uint8_t op2){
+  uint8_t res = op1 | op2;
+  registers.set_Z(res == 0);
+  registers.set_N(0); registers.set_H(0); registers.set_C(0);
+  return res;
+}
+
+uint8_t Cpu::cp_x8(uint8_t op1, uint8_t op2){
+  registers.set_Z(op1 == op2);
+  registers.set_N(1);
+  registers.set_H((op1 & 0xf) < (op2 & 0xf));
+  registers.set_C(op1 < op2);
+  return op1;
+}
+
+void Cpu::daa_instr(){
+  uint8_t correction_value = 0;
+
+  if(registers.get_H() or (registers.get_N() == 0 and (registers.read_A() & 0xf) > 9))
+    correction_value |= 0x06;
+  if(registers.get_C() or (registers.get_N() == 0 and (registers.read_A() > 0x99)))
+    correction_value |= 0x60, registers.set_C(1);
+
+  registers.write_A(registers.read_A() + (registers.get_N() ? -correction_value : correction_value));
+
+  registers.set_H(0);
+  registers.set_Z(registers.read_A() == 0);
+}

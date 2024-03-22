@@ -46,7 +46,19 @@ class Cpu{
   uint8_t get_xx(uint8_t);
   uint8_t get_yyy(uint8_t);
   uint8_t get_zzz(uint8_t);
-  bool   check_mask(uint8_t, std::string);
+  bool    check_mask(uint8_t, std::string);
+
+  // ALU instructions
+  uint8_t inc_dec_x8(uint8_t, uint8_t);
+  uint8_t add_x8(uint8_t, uint8_t);
+  uint8_t adc_x8(uint8_t, uint8_t);
+  uint8_t sub_x8(uint8_t, uint8_t);
+  uint8_t sbc_x8(uint8_t, uint8_t);
+  uint8_t and_x8(uint8_t, uint8_t);
+  uint8_t xor_x8(uint8_t, uint8_t);
+  uint8_t or_x8(uint8_t, uint8_t);
+  uint8_t cp_x8(uint8_t, uint8_t);
+  void    daa_instr();
 
 public:
 
@@ -58,7 +70,6 @@ public:
 
   // Get all the registers (debug purposes)
   Registers get_registers();
-  void print_state();
 
 };
 

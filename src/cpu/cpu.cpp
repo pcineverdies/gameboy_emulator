@@ -39,8 +39,6 @@ uint8_t Cpu::fetch(Bus* bus){
 */
 void Cpu::step(Bus* bus){
 
-  print_state();
-
   if(_state == State::STATE_1){
     _opcode = fetch(bus);
   }
