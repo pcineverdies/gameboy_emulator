@@ -1,5 +1,5 @@
-#include "../bus.h"
-#include "../memory.h"
+#include "../bus/bus.h"
+#include "../memory/memory.h"
 #include "../cpu/cpu.h"
 #include "../cpu/registers.h"
 #include <cassert>
@@ -9,10 +9,10 @@ int main(){
   {
 
     // TEST 1
-    Bus    bus("Bus", 0, 0xffff);
+    Bus    bus("Bus", 0, 0xffff, 8000);
     Memory ROM_00("ROM_00", 0, 0x1000);
     Memory HRAM("ROM_00", 0xff00, 0x0100);
-    Cpu    cpu;
+    Cpu    cpu("cpu", 2000);
     bus.add_to_bus(&ROM_00);
     bus.add_to_bus(&HRAM);
 
@@ -77,10 +77,10 @@ int main(){
   {
 
     // TEST 2
-    Bus    bus("Bus", 0, 0xffff);
+    Bus    bus("Bus", 0, 0xffff, 8000);
     Memory ROM_00("ROM_00", 0, 0x1000);
     Memory HRAM("ROM_00", 0xff00, 0x0100);
-    Cpu    cpu;
+    Cpu    cpu("cpu", 2000);
     bus.add_to_bus(&ROM_00);
     bus.add_to_bus(&HRAM);
 
@@ -127,10 +127,10 @@ int main(){
   {
 
     // TEST 3
-    Bus    bus("Bus", 0, 0xffff);
+    Bus    bus("Bus", 0, 0xffff, 8000);
     Memory ROM_00("ROM_00", 0, 0x1000);
     Memory HRAM("ROM_00", 0xff00, 0x0100);
-    Cpu    cpu;
+    Cpu    cpu("cpu", 2000);
     bus.add_to_bus(&ROM_00);
     bus.add_to_bus(&HRAM);
 
@@ -185,10 +185,10 @@ int main(){
   {
 
     // TEST 4
-    Bus    bus("Bus", 0, 0xffff);
+    Bus    bus("Bus", 0, 0xffff, 8000);
     Memory ROM_00("ROM_00", 0, 0x1000);
     Memory HRAM("ROM_00", 0xff00, 0x0100);
-    Cpu    cpu;
+    Cpu    cpu("cpu", 2000);
     bus.add_to_bus(&ROM_00);
     bus.add_to_bus(&HRAM);
 
@@ -227,6 +227,24 @@ int main(){
     assert(cpu.get_registers().read_A() == 0x16);
 
     printf("-> TEST4 terminated succesfully\n");
+  }
+
+  {
+
+    // TEST 5
+    Bus    bus("Bus", 0, 0xffff, 8000);
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    Memory HRAM("ROM_00", 0xff00, 0x0100);
+    Cpu    cpu("cpu", 2000);
+    bus.add_to_bus(&ROM_00);
+    bus.add_to_bus(&HRAM);
+    bus.add_to_bus(&cpu);
+
+    for(int i = 0; i < 1000; i++) bus.step(&bus);
+
+    assert(cpu.get_registers().PC == 0x01fa);
+
+    printf("-> TEST5 terminated succesfully\n");
   }
 
   printf("-> All test terminated succesfully\n");

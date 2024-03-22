@@ -97,12 +97,12 @@ Registers Cpu::get_registers(){
       if index is A, return the value of (HL)
       if index is A, return the value of A
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param index uint8_t index of the register to access
     @return uint8_t read value
 
 */
-uint8_t Cpu::read_x8(Bus* bus, uint8_t index){
+uint8_t Cpu::read_x8(Bus_obj* bus, uint8_t index){
 
   if(index >= 8) throw std::runtime_error("Register index is not valid");
 
@@ -121,12 +121,12 @@ uint8_t Cpu::read_x8(Bus* bus, uint8_t index){
       if index is A, write the value of (HL) with data
       if index is A, write the value of A with data
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param index uint8_t index of the register to access
     @param data uint8_t data to write
 
 */
-void Cpu::write_x8(Bus* bus, uint8_t index, uint8_t data){
+void Cpu::write_x8(Bus_obj* bus, uint8_t index, uint8_t data){
   if(index >= 8) throw std::runtime_error("Register index is not valid");
 
   if(index != 6) registers.registers[index] = data;

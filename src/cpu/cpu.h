@@ -3,12 +3,14 @@
 
 #include "opcode.h"
 #include "registers.h"
-#include "../bus.h"
+#include "../bus/bus.h"
+#include "../bus/bus_obj.h"
 #include <stdexcept>
 #include <stdio.h>
+#include <cstring>
 
 
-class Cpu{
+class Cpu : public Bus_obj{
 
   enum class State{ STATE_1, STATE_2, STATE_3, STATE_4, STATE_5, STATE_6 };
 
@@ -16,7 +18,7 @@ class Cpu{
   Registers registers;
 
   // Fetch function
-  uint8_t fetch(Bus*);
+  uint8_t fetch(Bus_obj*);
 
 
   // Internal registers multi-cycle instructions
@@ -29,20 +31,18 @@ class Cpu{
   uint32_t _u32;
 
   // Decode and execute functions
-  void execute_invalid(Bus*);
-  void execute_x8_lsm(Bus*);
-  void execute_x16_lsm(Bus*);
-  void execute_x8_alu(Bus*);
-  void execute_x16_alu(Bus*);
-  void execute_control_br(Bus*);
-  void execute_control_misc(Bus*);
-  void execute_x8_rsb(Bus*);
-
-  void internal_cycle(Bus*);
+  void execute_invalid(Bus_obj*);
+  void execute_x8_lsm(Bus_obj*);
+  void execute_x16_lsm(Bus_obj*);
+  void execute_x8_alu(Bus_obj*);
+  void execute_x16_alu(Bus_obj*);
+  void execute_control_br(Bus_obj*);
+  void execute_control_misc(Bus_obj*);
+  void execute_x8_rsb(Bus_obj*);
 
   // Internal functions for common operations
-  uint8_t read_x8(Bus*, uint8_t);
-  void    write_x8(Bus*, uint8_t, uint8_t);
+  uint8_t read_x8(Bus_obj*, uint8_t);
+  void    write_x8(Bus_obj*, uint8_t, uint8_t);
   bool    get_jump_condition(uint8_t);
   uint8_t get_xx(uint8_t);
   uint8_t get_yyy(uint8_t);
@@ -63,10 +63,13 @@ class Cpu{
 public:
 
   // Constructor
-  Cpu();
+  Cpu(std::string, uint32_t);
 
-  // Execute instruction, to run at 1MiHz
-  void step(Bus*);
+  // Execute instruction
+  void step(Bus_obj*);
+
+  uint8_t read(uint16_t a){return 0;}
+  void write(uint16_t a, uint8_t d){}
 
   // Get all the registers (debug purposes)
   Registers get_registers();

@@ -4,15 +4,17 @@
 /** CPU::execute_invalid
     Check whether the provided instruction is invalid
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
 
 */
-void Cpu::execute_invalid(Bus* bus){
-  if(
-    _opcode == 0xd3 or _opcode == 0xe3 or _opcode == 0xe4 or _opcode == 0xf4 or
-    _opcode == 0xdb or _opcode == 0xeb or _opcode == 0xec or _opcode == 0xfc or
-    _opcode == 0xdd or _opcode == 0xed or _opcode == 0xfd
+void Cpu::execute_invalid(Bus_obj* bus){
+  if(_opcode == INVALID_OPCODE_1 or _opcode == INVALID_OPCODE_2 or
+    _opcode == INVALID_OPCODE_3  or _opcode == INVALID_OPCODE_4 or
+    _opcode == INVALID_OPCODE_5  or _opcode == INVALID_OPCODE_6 or
+    _opcode == INVALID_OPCODE_7  or _opcode == INVALID_OPCODE_8 or
+    _opcode == INVALID_OPCODE_9  or _opcode == INVALID_OPCODE_10 or
+    _opcode == INVALID_OPCODE_11
   ) throw std::runtime_error("Parsed invalid opcode");
 }
 
@@ -20,11 +22,11 @@ void Cpu::execute_invalid(Bus* bus){
     Collects the execution of all the instructions in the
     category lsm (Load/Store/Move 8 bits)
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
 
 */
-void Cpu::execute_x8_lsm(Bus* bus){
+void Cpu::execute_x8_lsm(Bus_obj* bus){
 
   uint8_t xx  = get_xx(_opcode);
   uint8_t yyy = get_yyy(_opcode);
@@ -133,11 +135,11 @@ void Cpu::execute_x8_lsm(Bus* bus){
     Collects the execution of all the instructions in the
     category lsm (Load/Store/Move 16 bits)
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
 
 */
-void Cpu::execute_x16_lsm(Bus* bus){
+void Cpu::execute_x16_lsm(Bus_obj* bus){
 
   if(check_mask(_opcode, LD_r16_u16_OPCODE)){
     if(_state == State::STATE_1){
@@ -239,10 +241,10 @@ void Cpu::execute_x16_lsm(Bus* bus){
 /** CPU::execute_x8_alu
     Decodes and runs all the instructions in the category x8_alu
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Cpu::execute_x8_alu(Bus* bus){
+void Cpu::execute_x8_alu(Bus_obj* bus){
 
   uint8_t xx  = get_xx(_opcode);
   uint8_t yyy = get_yyy(_opcode);
@@ -358,10 +360,10 @@ void Cpu::execute_x8_alu(Bus* bus){
 /** CPU::execute_x16_alu
     Decodes and runs all the instructions in the category x16_alu
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Cpu::execute_x16_alu(Bus* bus){
+void Cpu::execute_x16_alu(Bus_obj* bus){
 
   if(check_mask(_opcode, ALU_16_INC_DEC_OPCODE)){
     if(_state == State::STATE_1){
@@ -429,7 +431,7 @@ void Cpu::execute_x16_alu(Bus* bus){
   }
 }
 
-void Cpu::execute_control_br(Bus* bus ){
+void Cpu::execute_control_br(Bus_obj* bus ){
 
   if(check_mask(_opcode, JR_COND_OPCODE)){
     if(_state == State::STATE_1){
@@ -585,20 +587,20 @@ void Cpu::execute_control_br(Bus* bus ){
 /** CPU::execute_control_misc
     Decodes and runs all the instructions in the category control_misc
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Cpu::execute_control_misc(Bus* bus){}
+void Cpu::execute_control_misc(Bus_obj* bus){}
 
 /** CPU::execute_x8_rsb
     Collects the execution of all the instructions in the
     category x8 rsb (Rotate/Shift/Bit 8 bits)
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
 
 */
-void Cpu::execute_x8_rsb(Bus* bus){
+void Cpu::execute_x8_rsb(Bus_obj* bus){
   uint8_t zzz = get_zzz(_opcode);
   uint8_t yyy = get_yyy(_opcode);
   uint8_t u8 = read_x8(bus, zzz);

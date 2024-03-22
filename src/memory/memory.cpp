@@ -29,7 +29,7 @@ void Memory::write(uint16_t addr, uint8_t data){
 }
 
 /** Memory::Memory
-    Memory constructor
+    Memory constructor. Sets working frequency to 0.
 
     @param name std::string Name of the object to create
     @param init_addr uint16_t Initial address of the object once connected to the bus
@@ -37,6 +37,7 @@ void Memory::write(uint16_t addr, uint8_t data){
 
 */
 Memory::Memory(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
+  this->set_frequency(0);
   this->memory.resize(this->size_addr);
   for(int i = 0; i < this->size_addr; i++) this->memory[i] = 0;
 }

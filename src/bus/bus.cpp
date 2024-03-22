@@ -7,9 +7,13 @@
     @param name std::string Name of the object to create
     @param init_addr uint16_t Initial address of the object once connected to the bus
     @param size uint16_t Size of the addressable space of the object
+    @param frequency uint16_t Working frequency of the clock connected to the bus
 
 */
-Bus::Bus(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){}
+Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint16_t frequency) :
+  Bus_obj(name, init_addr, size){
+  this->set_frequency(frequency);
+}
 
 /** Bus::add_to_bus
     Add the pointer of an object to the list of handled objects. It
@@ -36,15 +40,23 @@ Bus::Bus(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, in
 */
 void Bus::add_to_bus(Bus_obj* new_object){
 
-  for(auto& obj : bus_objects){
-    uint16_t N_i = new_object->get_init_addr();
-    uint16_t N_l = new_object->get_last_addr();
-    uint16_t P_i = obj->get_init_addr();
-    uint16_t P_l = obj->get_last_addr();
+  // Always add objects whose size is 0. These are non addressable objects
+  if(new_object->get_size() != 0){
 
-    if((N_i <= P_i and N_l >= P_i) or (N_i >= P_i and N_i <= P_l) or (N_i >= P_i and N_l <= P_l) or (N_i <= P_i and P_l <= N_l))
-      throw std::invalid_argument("Overlap in address space");
+    for(auto& obj : bus_objects){
+      uint16_t N_i = new_object->get_init_addr();
+      uint16_t N_l = new_object->get_last_addr();
+      uint16_t P_i = obj->get_init_addr();
+      uint16_t P_l = obj->get_last_addr();
+
+      if((N_i <= P_i and N_l >= P_i) or (N_i >= P_i and N_i <= P_l) or (N_i >= P_i and N_l <= P_l) or (N_i <= P_i and P_l <= N_l))
+        throw std::invalid_argument("Overlap in address space");
+    }
   }
+
+  if(new_object->get_frequency() != 0 and
+      ( this->get_frequency() % new_object->get_frequency() != 0 or new_object->get_frequency() > this->get_frequency())
+  ) throw std::invalid_argument("Objects connected to bus must have frequency divisible for the bus frequency");
 
   bus_objects.push_back(new_object);
 }
@@ -61,6 +73,9 @@ void Bus::add_to_bus(Bus_obj* new_object){
 uint8_t Bus::read(uint16_t addr){
   for(auto& bus_obj : bus_objects){
 
+    // Cannot read on non-addressable objects
+    if(bus_obj->get_size() == 0) continue;
+
     uint16_t size = bus_obj->get_size();
     uint16_t init_addr = bus_obj->get_init_addr();
 
@@ -71,7 +86,7 @@ uint8_t Bus::read(uint16_t addr){
   return 0;
 }
 
-/** Memory::write
+/** Bus::write
     Write a byte in memory at a given address.
     Try with all the object connected to the bus.
 
@@ -82,6 +97,9 @@ uint8_t Bus::read(uint16_t addr){
 void Bus::write(uint16_t addr, uint8_t data){
 
   for(auto& bus_obj : bus_objects){
+
+    // Cannot write on non-addressable objects
+    if(bus_obj->get_size() == 0) continue;
 
     uint16_t size = bus_obj->get_size();
     uint16_t init_addr = bus_obj->get_init_addr();
@@ -94,3 +112,24 @@ void Bus::write(uint16_t addr, uint8_t data){
 
 }
 
+/** Bus::step
+
+    @param bus Bus_obj* pointer to the bus to use to perform reading from the elements side
+
+*/
+void Bus::step(Bus_obj* bus){
+
+  for(auto& bus_obj : bus_objects){
+
+    // Cannot step asynchronous objects, such as memories
+    if(bus_obj->get_frequency() == 0) continue;
+
+    if(current_cc % (this->get_frequency() / bus_obj->get_frequency()) == 0)
+      bus_obj->step(bus);
+
+  }
+
+  current_cc++;
+  // TOOD PAUSE
+
+}

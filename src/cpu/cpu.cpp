@@ -4,8 +4,15 @@
 /** CPU::CPU
     In charge of initializing the registers with the expected values.
 
+    @param frequency uint32_t Frequency of the cpu
+
 */
-Cpu::Cpu(){
+Cpu::Cpu(std::string name, uint32_t frequency) : Bus_obj(name, 0, 0){
+
+  this->set_frequency(frequency);
+
+  _state = State::STATE_1;
+
   registers.write_A(0x00);
   registers.write_F(0x00);
   registers.write_BC(0x00);
@@ -21,11 +28,11 @@ Cpu::Cpu(){
 /** CPU::fetch
     Read the memory at the current value of PC and update it.
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
     @return uint8_t read value
 
 */
-uint8_t Cpu::fetch(Bus* bus){
+uint8_t Cpu::fetch(Bus_obj* bus){
   return bus->read(registers.PC++);
 }
 
@@ -34,10 +41,10 @@ uint8_t Cpu::fetch(Bus* bus){
     Performs the initial step of an instraction, whose length might be
     more than one singe M-cycle. This length is handled within the bus access.
 
-    @param bus Bus* pointer to a bus to use for reading
+    @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Cpu::step(Bus* bus){
+void Cpu::step(Bus_obj* bus){
 
   if(_state == State::STATE_1){
     _opcode = fetch(bus);
