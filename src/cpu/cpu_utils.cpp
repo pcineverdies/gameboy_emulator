@@ -94,8 +94,8 @@ Registers Cpu::get_registers(){
       if index is 3, return the value of E
       if index is 4, return the value of H
       if index is 5, return the value of L
-      if index is A, return the value of (HL)
-      if index is A, return the value of A
+      if index is 6, return the value of (HL)
+      if index is 7, return the value of A
 
     @param bus Bus_obj* pointer to a bus to use for reading
     @param index uint8_t index of the register to access
@@ -118,8 +118,8 @@ uint8_t Cpu::read_x8(Bus_obj* bus, uint8_t index){
       if index is 3, write the value of E with data
       if index is 4, write the value of H with data
       if index is 5, write the value of L with data
-      if index is A, write the value of (HL) with data
-      if index is A, write the value of A with data
+      if index is 6, write the value of (HL) with data
+      if index is 7, write the value of A with data
 
     @param bus Bus_obj* pointer to a bus to use for reading
     @param index uint8_t index of the register to access
@@ -134,3 +134,50 @@ void Cpu::write_x8(Bus_obj* bus, uint8_t index, uint8_t data){
 
 }
 
+/** CPU::read_IE
+    Read the content of the memory-mapped register IE
+    (it does not require an extra cycle)
+
+    @param bus Bus_obj* pointer to a bus to use for reading
+    @return uint8_t value of the register
+
+*/
+uint8_t Cpu::read_IE(Bus_obj* bus){
+  return bus->read(IE_ADDRESS);
+}
+
+/** CPU::read_IF
+    Read the content of the memory-mapped register IF
+    (it does not require an extra cycle)
+
+    @param bus Bus_obj* pointer to a bus to use for reading
+    @return uint8_t value of the register
+
+*/
+uint8_t Cpu::read_IF(Bus_obj* bus){
+  return bus->read(IF_ADDRESS);
+}
+
+/** CPU::write_IE
+    Write the content of the memory-mapped register IE
+    (it does not require an extra cycle)
+
+    @param bus Bus_obj* pointer to a bus to use for writing
+    @param data uint8_t data to write
+
+*/
+void Cpu::write_IE(Bus_obj* bus, uint8_t data){
+  bus->write(IE_ADDRESS, data);
+}
+
+/** CPU::write_IF
+    Write the content of the memory-mapped register IF
+    (it does not require an extra cycle)
+
+    @param bus Bus_obj* pointer to a bus to use for writing
+    @param data uint8_t data to write
+
+*/
+void Cpu::write_IF(Bus_obj* bus, uint8_t data){
+  bus->write(IF_ADDRESS, data);
+}

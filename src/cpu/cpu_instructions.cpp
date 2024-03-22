@@ -574,7 +574,7 @@ void Cpu::execute_control_br(Bus_obj* bus ){
     }
     else if(_state == State::STATE_4){
       registers.PC = _u16;
-      if(_opcode == 0xd9){} // TODO INTERRUPT
+      if(_opcode == 0xd9) IME = 1;
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction CALL cond");
@@ -590,7 +590,24 @@ void Cpu::execute_control_br(Bus_obj* bus ){
     @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Cpu::execute_control_misc(Bus_obj* bus){}
+void Cpu::execute_control_misc(Bus_obj* bus){
+
+  if(_opcode == NOP_OPCODE){
+    return;
+  }
+  if(_opcode == STOP_OPCODE){
+    return; // Not used in DMG
+  }
+  if(_opcode == HALT_OPCODE){
+    halt_handler(bus);
+  }
+  if(_opcode == DI_OPCODE){
+    IME = 0;
+  }
+  if(_opcode == EI_OPCODE){
+    _ei_delayed = 1;
+  }
+}
 
 /** CPU::execute_x8_rsb
     Collects the execution of all the instructions in the
@@ -606,42 +623,54 @@ void Cpu::execute_x8_rsb(Bus_obj* bus){
   uint8_t u8 = read_x8(bus, zzz);
 
   // Bit N and H are always reset in instructions which are not BIT, RES and SET
-  if(check_mask(_opcode, CB_BLOCK0_OPCODE)) registers.set_H(0), registers.set_N(0);
+  if(check_mask(_opcode, CB_BLOCK0_OPCODE)){
+    registers.set_H(0);
+    registers.set_N(0);
+  }
 
   if(check_mask(_opcode, CB_RLC_OPCODE)){
-    registers.set_C(u8 & 0x80); registers.set_Z(u8 == 0);
+    registers.set_C(u8 & 0x80);
+    registers.set_Z(u8 == 0);
     write_x8(bus, zzz, (u8 << 1) | (u8 >> 7));
   }
   if(check_mask(_opcode, CB_RRC_OPCODE)){
-    registers.set_C(u8 & 0x01); registers.set_Z(u8 == 0);
+    registers.set_C(u8 & 0x01);
+    registers.set_Z(u8 == 0);
     write_x8(bus, zzz, (u8 >> 1) | (u8 << 7));
   }
   if(check_mask(_opcode, CB_RL_OPCODE)){
     write_x8(bus, zzz, (u8 << 1) | (registers.get_C()));
-    registers.set_Z(((u8 << 1) | registers.get_C()) == 0); registers.set_C(u8 & 0x80);
+    registers.set_Z(((u8 << 1) | registers.get_C()) == 0);
+    registers.set_C(u8 & 0x80);
   }
   if(check_mask(_opcode, CB_RR_OPCODE)){
     write_x8(bus, zzz, (u8 >> 1) | (registers.get_C() << 7));
-    registers.set_Z(((u8 >> 1) | (registers.get_C() << 7)) == 0); registers.set_C(u8 & 0x01);
+    registers.set_Z(((u8 >> 1) | (registers.get_C() << 7)) == 0);
+    registers.set_C(u8 & 0x01);
   }
   if(check_mask(_opcode, CB_SLA_OPCODE)){
-    registers.set_C(u8 & 0x80); registers.set_Z((u8 << 1) == 0);
+    registers.set_C(u8 & 0x80);
+    registers.set_Z((u8 << 1) == 0);
     write_x8(bus, zzz, (u8 << 1));
   }
   if(check_mask(_opcode, CB_SRA_OPCODE)){
     write_x8(bus, zzz, (u8 & 0x80) | (u8 >> 1));
-    registers.set_Z(((u8 & 0x80) | (u8 >> 1)) == 0); registers.set_C(u8 & 0x01);
+    registers.set_Z(((u8 & 0x80) | (u8 >> 1)) == 0);
+    registers.set_C(u8 & 0x01);
   }
   if(check_mask(_opcode, CB_SWAP_OPCODE)){
-    registers.set_Z(u8 == 0), registers.set_C(0);
+    registers.set_Z(u8 == 0);
+    registers.set_C(0);
     write_x8(bus, zzz, (u8 << 4) | (u8 >> 4));
   }
   if(check_mask(_opcode, CB_SRL_OPCODE)){
-    registers.set_C(u8 & 0x01); registers.set_Z((u8 >> 1) == 0);
+    registers.set_C(u8 & 0x01);
+    registers.set_Z((u8 >> 1) == 0);
     write_x8(bus, zzz, (u8 >> 1));
   }
   if(check_mask(_opcode, CB_BIT_OPCODE)){
-    registers.set_H(1), registers.set_N(0);
+    registers.set_H(1);
+    registers.set_N(0);
     registers.set_Z(u8 & (1 << yyy));
   }
   if(check_mask(_opcode, CB_SET_RES_OPCODE)){
@@ -802,4 +831,42 @@ uint8_t Cpu::cp_x8(uint8_t op1, uint8_t op2){
   registers.set_H((op1 & 0xf) < (op2 & 0xf));
   registers.set_C(op1 < op2);
   return op1;
+}
+
+void Cpu::halt_handler(Bus_obj* bus){
+
+  if(IME == 1){
+    _is_halted = 1;
+    registers.PC--;
+    return;
+  }
+
+  if(_is_halted == 1){
+    if(read_IF(bus) & read_IE(bus)){
+      _is_halted = 0;
+      return;
+    }
+    else{
+      registers.PC--;
+    }
+  }
+
+  if(_is_halted == 0 and !(read_IF(bus) & read_IE(bus))){
+    _is_halted = 1;
+    registers.PC--;
+    return;
+  }
+
+  if(_is_halted == 0 and (read_IF(bus) & read_IE(bus))){
+    if(_ei_delayed){
+      _ei_delayed = 0;
+      IME = 1;
+      registers.PC--;
+      interrupt_handler(bus);
+      return;
+    }
+    _halt_bug = 1;
+    return;
+  }
+
 }

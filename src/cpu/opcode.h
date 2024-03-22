@@ -115,4 +115,10 @@
 #define CB_BIT_OPCODE "01xxxxxx"
 #define CB_SET_RES_OPCODE "1xxxxxxx"
 
+#define NOP_OPCODE  0x00
+#define STOP_OPCODE 0x10
+#define HALT_OPCODE 0x76
+#define DI_OPCODE   0xf3
+#define EI_OPCODE   0xfb
+
 #endif

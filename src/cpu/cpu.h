@@ -3,6 +3,7 @@
 
 #include "opcode.h"
 #include "registers.h"
+#include "../memory/memory_map.h"
 #include "../bus/bus.h"
 #include "../bus/bus_obj.h"
 #include <stdexcept>
@@ -12,23 +13,36 @@
 
 class Cpu : public Bus_obj{
 
-  enum class State{ STATE_1, STATE_2, STATE_3, STATE_4, STATE_5, STATE_6 };
+  enum class State{
+    // Standard execution states
+    STATE_1, STATE_2, STATE_3, STATE_4, STATE_5, STATE_6,
+
+    // Interrupt handling states
+    STATE_I_2, STATE_I_3, STATE_I_4, STATE_I_5
+  };
 
   // Registers available for the cpu
   Registers registers;
 
-  // Fetch function
-  uint8_t fetch(Bus_obj*);
+  // IME flags and variables to handle interrupts and halt state
+  uint8_t IME;
+  uint8_t _ei_delayed;
+  uint8_t _is_halted;
+  uint8_t _halt_bug;
 
 
   // Internal registers multi-cycle instructions
   enum State _state;
-  uint8_t _opcode;
-  uint8_t  _u8;
-  uint8_t  _u8_2;
-  uint16_t _u16;
-  uint16_t _u16_2;
-  uint32_t _u32;
+  uint8_t    _opcode;
+  uint8_t    _u8;
+  uint8_t    _u8_2;
+  uint16_t   _u16;
+  uint16_t   _u16_2;
+  uint32_t   _u32;
+  uint8_t    _interrupt_to_handle;
+
+  // Fetch function
+  uint8_t fetch(Bus_obj*);
 
   // Decode and execute functions
   void execute_invalid(Bus_obj*);
@@ -39,6 +53,8 @@ class Cpu : public Bus_obj{
   void execute_control_br(Bus_obj*);
   void execute_control_misc(Bus_obj*);
   void execute_x8_rsb(Bus_obj*);
+  bool interrupt_handler(Bus_obj*);
+  void halt_handler(Bus_obj*);
 
   // Internal functions for common operations
   uint8_t read_x8(Bus_obj*, uint8_t);
@@ -48,6 +64,11 @@ class Cpu : public Bus_obj{
   uint8_t get_yyy(uint8_t);
   uint8_t get_zzz(uint8_t);
   bool    check_mask(uint8_t, std::string);
+
+  uint8_t read_IE(Bus_obj*);
+  uint8_t read_IF(Bus_obj*);
+  void write_IE(Bus_obj*, uint8_t);
+  void write_IF(Bus_obj*, uint8_t);
 
   // ALU instructions
   uint8_t inc_dec_x8(uint8_t, uint8_t);
@@ -68,6 +89,7 @@ public:
   // Execute instruction
   void step(Bus_obj*);
 
+  // Compliance with parent class, not employed
   uint8_t read(uint16_t a){return 0;}
   void write(uint16_t a, uint8_t d){}
 
