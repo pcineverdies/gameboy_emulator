@@ -1,6 +1,5 @@
 #include "cpu.h"
 
-
 /** CPU::CPU
     In charge of initializing the registers with the expected values.
 
@@ -13,11 +12,14 @@ Cpu::Cpu(std::string name, uint32_t frequency) : Bus_obj(name, 0, 0){
 
   _state = State::STATE_1;
 
-  registers.write_A(0x00);
-  registers.write_F(0x00);
-  registers.write_BC(0x00);
-  registers.write_DE(0x00);
-  registers.write_HL(0x00);
+  registers.write_A(0x01);
+  registers.write_F(0xb0);
+  registers.write_B(0x00);
+  registers.write_C(0x13);
+  registers.write_D(0x00);
+  registers.write_E(0xd8);
+  registers.write_H(0x01);
+  registers.write_L(0x4d);
 
   registers.PC = 0x0100;
   registers.SP = 0xfffe;
@@ -62,6 +64,7 @@ void Cpu::step(Bus_obj* bus){
       _ei_delayed = 0;
     }
 
+    print_status(bus);
     _opcode = fetch(bus);
 
     if(_halt_bug == 1){
@@ -73,14 +76,18 @@ void Cpu::step(Bus_obj* bus){
 
   if(_opcode == CB_OPCODE){
     if(_state == State::STATE_1){
-      _state = State::STATE_2;
-    }
-    else{
-      _opcode = fetch(bus);
-      execute_x8_rsb(bus);
-      _state = State::STATE_1;
+      _state = State::STATE_CB_2;
+      return;
     }
   }
+
+  if(_state == State::STATE_CB_2 or _state == State::STATE_CB_3 or _state == State::STATE_CB_4){
+    if(_state == State::STATE_CB_2){
+      _opcode = fetch(bus);
+    }
+    execute_x8_rsb(bus);
+  }
+
   else{
     // Try to match the opcode within all the possible categories of instrcutions.
     execute_invalid(bus);

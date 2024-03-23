@@ -181,3 +181,23 @@ void Cpu::write_IE(Bus_obj* bus, uint8_t data){
 void Cpu::write_IF(Bus_obj* bus, uint8_t data){
   bus->write(IF_ADDRESS, data);
 }
+
+void Cpu::print_status(Bus_obj* bus){
+  printf(
+    "A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
+    registers.read_A(),
+    registers.read_F(),
+    registers.read_B(),
+    registers.read_C(),
+    registers.read_D(),
+    registers.read_E(),
+    registers.read_H(),
+    registers.read_L(),
+    registers.SP,
+    registers.PC,
+    bus->read(registers.PC),
+    bus->read(registers.PC + 1),
+    bus->read(registers.PC + 2),
+    bus->read(registers.PC + 3)
+  );
+}

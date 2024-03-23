@@ -30,13 +30,13 @@
 #define POP_BC_OPCODE 0xc1
 #define POP_DE_OPCODE 0xd1
 #define POP_HL_OPCODE 0xe1
-#define POP_SP_OPCODE 0xf1
+#define POP_AF_OPCODE 0xf1
 
 #define PUSH_OPCODE "11xx0101"
 #define PUSH_BC_OPCODE 0xc5
 #define PUSH_DE_OPCODE 0xd5
 #define PUSH_HL_OPCODE 0xe5
-#define PUSH_SP_OPCODE 0xf5
+#define PUSH_AF_OPCODE 0xf5
 
 #define LD_u16_SP_OPCODE 0x08
 #define LD_SP_HL_OPCODE 0xf9

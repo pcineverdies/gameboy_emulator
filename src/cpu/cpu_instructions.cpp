@@ -90,8 +90,9 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_3;
     }
     else if(_state == State::STATE_3){
-      if(yyy == 0b101) bus->write(0xff00 + _u8, registers.read_A());
-      if(yyy == 0b111) registers.write_A(bus->read(0xff00 + _u8));
+      _u16 = _u8;
+      if(yyy == 0b100) bus->write(0xff00 + _u16, registers.read_A());
+      if(yyy == 0b110) registers.write_A(bus->read(0xff00 + _u16));
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_ff00_u8");
@@ -173,7 +174,7 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       if(_opcode == POP_BC_OPCODE) registers.write_C(_u8), registers.write_B(_u8_2);
       if(_opcode == POP_DE_OPCODE) registers.write_E(_u8), registers.write_D(_u8_2);
       if(_opcode == POP_HL_OPCODE) registers.write_L(_u8), registers.write_H(_u8_2);
-      if(_opcode == POP_SP_OPCODE) registers.write_F(_u8), registers.write_A(_u8_2);
+      if(_opcode == POP_AF_OPCODE) registers.write_F(_u8), registers.write_A(_u8_2);
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction POP");
@@ -190,14 +191,14 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       if(_opcode == PUSH_BC_OPCODE) bus->write(--registers.SP, registers.read_B());
       if(_opcode == PUSH_DE_OPCODE) bus->write(--registers.SP, registers.read_D());
       if(_opcode == PUSH_HL_OPCODE) bus->write(--registers.SP, registers.read_H());
-      if(_opcode == PUSH_SP_OPCODE) bus->write(--registers.SP, registers.read_A());
+      if(_opcode == PUSH_AF_OPCODE) bus->write(--registers.SP, registers.read_A());
       _state = State::STATE_4;
     }
     else if(_state == State::STATE_4){
       if(_opcode == PUSH_BC_OPCODE) bus->write(--registers.SP, registers.read_C());
       if(_opcode == PUSH_DE_OPCODE) bus->write(--registers.SP, registers.read_E());
       if(_opcode == PUSH_HL_OPCODE) bus->write(--registers.SP, registers.read_L());
-      if(_opcode == PUSH_SP_OPCODE) bus->write(--registers.SP, registers.read_F());
+      if(_opcode == PUSH_AF_OPCODE) bus->write(--registers.SP, registers.read_F());
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction PUSH");
@@ -318,7 +319,7 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
 
   if(_opcode == CPL_OPCODE){
     registers.write_A(~A);
-    registers.set_H(0); registers.set_N(0);
+    registers.set_H(1); registers.set_N(1);
   }
 
   if(_opcode == CCF_OPCODE){
@@ -398,7 +399,7 @@ void Cpu::execute_x16_alu(Bus_obj* bus){
       registers.set_N(0);
       registers.set_H((_u16 & 0xfff) + (_u16_2 & 0xfff) > 0xfff);
       _u32 = _u16 + _u16_2;
-      registers.set_C(_u32 & 0x10000);
+      registers.set_C((_u32 & 0x10000) ? 1 : 0);
       registers.write_HL(_u16 + _u16_2);
 
       _state = State::STATE_1;
@@ -620,61 +621,81 @@ void Cpu::execute_control_misc(Bus_obj* bus){
 void Cpu::execute_x8_rsb(Bus_obj* bus){
   uint8_t zzz = get_zzz(_opcode);
   uint8_t yyy = get_yyy(_opcode);
-  uint8_t u8 = read_x8(bus, zzz);
 
-  // Bit N and H are always reset in instructions which are not BIT, RES and SET
-  if(check_mask(_opcode, CB_BLOCK0_OPCODE)){
-    registers.set_H(0);
-    registers.set_N(0);
+  if(yyy != LH_INDEX){
+    _u8 = read_x8(bus, zzz);
+    _state = State::STATE_CB_4;
+  }
+  else{
+    if(_state == State::STATE_CB_2){
+      _state = State::STATE_CB_3;
+      return;
+    }
+    if(_state == State::STATE_CB_3){
+      _u8 = read_x8(bus, zzz);
+      _state = State::STATE_CB_4;
+      return;
+    }
   }
 
-  if(check_mask(_opcode, CB_RLC_OPCODE)){
-    registers.set_C(u8 & 0x80);
-    registers.set_Z(u8 == 0);
-    write_x8(bus, zzz, (u8 << 1) | (u8 >> 7));
-  }
-  if(check_mask(_opcode, CB_RRC_OPCODE)){
-    registers.set_C(u8 & 0x01);
-    registers.set_Z(u8 == 0);
-    write_x8(bus, zzz, (u8 >> 1) | (u8 << 7));
-  }
-  if(check_mask(_opcode, CB_RL_OPCODE)){
-    write_x8(bus, zzz, (u8 << 1) | (registers.get_C()));
-    registers.set_Z(((u8 << 1) | registers.get_C()) == 0);
-    registers.set_C(u8 & 0x80);
-  }
-  if(check_mask(_opcode, CB_RR_OPCODE)){
-    write_x8(bus, zzz, (u8 >> 1) | (registers.get_C() << 7));
-    registers.set_Z(((u8 >> 1) | (registers.get_C() << 7)) == 0);
-    registers.set_C(u8 & 0x01);
-  }
-  if(check_mask(_opcode, CB_SLA_OPCODE)){
-    registers.set_C(u8 & 0x80);
-    registers.set_Z((u8 << 1) == 0);
-    write_x8(bus, zzz, (u8 << 1));
-  }
-  if(check_mask(_opcode, CB_SRA_OPCODE)){
-    write_x8(bus, zzz, (u8 & 0x80) | (u8 >> 1));
-    registers.set_Z(((u8 & 0x80) | (u8 >> 1)) == 0);
-    registers.set_C(u8 & 0x01);
-  }
-  if(check_mask(_opcode, CB_SWAP_OPCODE)){
-    registers.set_Z(u8 == 0);
-    registers.set_C(0);
-    write_x8(bus, zzz, (u8 << 4) | (u8 >> 4));
-  }
-  if(check_mask(_opcode, CB_SRL_OPCODE)){
-    registers.set_C(u8 & 0x01);
-    registers.set_Z((u8 >> 1) == 0);
-    write_x8(bus, zzz, (u8 >> 1));
-  }
-  if(check_mask(_opcode, CB_BIT_OPCODE)){
-    registers.set_H(1);
-    registers.set_N(0);
-    registers.set_Z(u8 & (1 << yyy));
-  }
-  if(check_mask(_opcode, CB_SET_RES_OPCODE)){
-    write_x8(bus, zzz, (_opcode & 0x40) ? (u8 | (1 << yyy)) : (u8 & ~(1 << yyy)));
+  if(_state == State::STATE_CB_4){
+
+    // Bit N and H are always reset in instructions which are not BIT, RES and SET
+    if(check_mask(_opcode, CB_BLOCK0_OPCODE)){
+      registers.set_H(0);
+      registers.set_N(0);
+    }
+
+    if(check_mask(_opcode, CB_RLC_OPCODE)){
+      registers.set_C(_u8 & 0x80);
+      registers.set_Z(_u8 == 0);
+      write_x8(bus, zzz, (_u8 << 1) | (_u8 >> 7));
+    }
+    if(check_mask(_opcode, CB_RRC_OPCODE)){
+      registers.set_C(_u8 & 0x01);
+      registers.set_Z(_u8 == 0);
+      write_x8(bus, zzz, (_u8 >> 1) | (_u8 << 7));
+    }
+    if(check_mask(_opcode, CB_RL_OPCODE)){
+      write_x8(bus, zzz, (_u8 << 1) | (registers.get_C()));
+      registers.set_Z((((_u8 << 1) | registers.get_C()) & 0xff) == 0);
+      registers.set_C(_u8 & 0x80);
+    }
+    if(check_mask(_opcode, CB_RR_OPCODE)){
+      write_x8(bus, zzz, (_u8 >> 1) | (registers.get_C() << 7));
+      registers.set_Z(((_u8 >> 1) | (registers.get_C() << 7)) == 0);
+      registers.set_C(_u8 & 0x01);
+    }
+    if(check_mask(_opcode, CB_SLA_OPCODE)){
+      registers.set_C(_u8 & 0x80);
+      registers.set_Z(((_u8 << 1) & 0xff) == 0);
+      write_x8(bus, zzz, (_u8 << 1));
+    }
+    if(check_mask(_opcode, CB_SRA_OPCODE)){
+      write_x8(bus, zzz, (_u8 & 0x80) | (_u8 >> 1));
+      registers.set_Z(((_u8 & 0x80) | (_u8 >> 1)) == 0);
+      registers.set_C(_u8 & 0x01);
+    }
+    if(check_mask(_opcode, CB_SWAP_OPCODE)){
+      registers.set_Z(_u8 == 0);
+      registers.set_C(0);
+      write_x8(bus, zzz, (_u8 << 4) | (_u8 >> 4));
+    }
+    if(check_mask(_opcode, CB_SRL_OPCODE)){
+      registers.set_C(_u8 & 0x01);
+      registers.set_Z((_u8 >> 1) == 0);
+      write_x8(bus, zzz, (_u8 >> 1));
+    }
+    if(check_mask(_opcode, CB_BIT_OPCODE)){
+      registers.set_H(1);
+      registers.set_N(0);
+      registers.set_Z(!(_u8 & (1 << yyy)));
+    }
+    if(check_mask(_opcode, CB_SET_RES_OPCODE)){
+      write_x8(bus, zzz, (_opcode & 0x40) ? (_u8 | (1 << yyy)) : (_u8 & ~(1 << yyy)));
+    }
+
+    _state = State::STATE_1;
   }
 }
 
@@ -688,9 +709,9 @@ void Cpu::execute_x8_rsb(Bus_obj* bus){
 
 */
 uint8_t Cpu::inc_dec_x8(uint8_t opcode, uint8_t u8){
-  registers.set_Z(opcode & 1 ? u8 - 1 == 0 : u8 + 1 == 0);
+  registers.set_Z(opcode & 1 ? ((u8 - 1) & 0xff) == 0 : ((u8 + 1) & 0xff) == 0);
   registers.set_N(opcode & 1 ? 1 : 0);
-  registers.set_H((u8 & 0xf) + (opcode & 1 ? -1 : 1) > 0xf);
+  registers.set_H((opcode & 1) ? (u8 & 0xf) == 0 : (u8 & 0xf) == 0xf);
   return (opcode & 1 ? u8 - 1 : u8 + 1);
 
 }
@@ -706,10 +727,10 @@ uint8_t Cpu::inc_dec_x8(uint8_t opcode, uint8_t u8){
 */
 uint8_t Cpu::add_x8(uint8_t op1, uint8_t op2){
   uint16_t res = op1 + op2;
-  registers.set_Z(res == 0);
+  registers.set_Z((res & 0xff) == 0);
   registers.set_N(0);
   registers.set_H((op1 & 0xf) + (op2 & 0xf) > 0xf);
-  registers.set_C(res & 0x0100);
+  registers.set_C((res & 0x0100) ? 1 : 0);
   return res & 0x00ff;
 }
 
@@ -724,10 +745,10 @@ uint8_t Cpu::add_x8(uint8_t op1, uint8_t op2){
 */
 uint8_t Cpu::adc_x8(uint8_t op1, uint8_t op2){
   uint16_t res = op1 + op2 + registers.get_C();
-  registers.set_Z(res == 0);
+  registers.set_Z((res & 0xff) == 0);
   registers.set_N(0);
   registers.set_H((op1 & 0xf) + (op2 & 0xf) + registers.get_C() > 0xf);
-  registers.set_C(res & 0x0100);
+  registers.set_C((res & 0x0100) ? 1 : 0);
   return res & 0x00ff;
 }
 
@@ -759,11 +780,11 @@ uint8_t Cpu::sub_x8(uint8_t op1, uint8_t op2){
 
 */
 uint8_t Cpu::sbc_x8(uint8_t op1, uint8_t op2){
-  uint8_t res = op1 - (op2 + registers.get_C());
+  uint8_t res = op1 + ~op2 + !registers.get_C();
   registers.set_Z(res == 0);
   registers.set_N(1);
-  registers.set_H((op1 & 0xf) < ((op2 + registers.get_C()) & 0xf));
-  registers.set_C((uint16_t)op1 > (uint16_t)(op2 + registers.get_C()));
+  registers.set_H((op1 & 0xf) < ((op2 & 0xf) + registers.get_C()));
+  registers.set_C((uint16_t)op1 < (uint16_t)(op2 + registers.get_C()));
   return res;
 }
 

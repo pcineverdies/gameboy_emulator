@@ -18,7 +18,10 @@ class Cpu : public Bus_obj{
     STATE_1, STATE_2, STATE_3, STATE_4, STATE_5, STATE_6,
 
     // Interrupt handling states
-    STATE_I_2, STATE_I_3, STATE_I_4, STATE_I_5
+    STATE_I_2, STATE_I_3, STATE_I_4, STATE_I_5,
+
+    // CB handling states
+    STATE_CB_2, STATE_CB_3, STATE_CB_4
   };
 
   // Registers available for the cpu
@@ -64,6 +67,7 @@ class Cpu : public Bus_obj{
   uint8_t get_yyy(uint8_t);
   uint8_t get_zzz(uint8_t);
   bool    check_mask(uint8_t, std::string);
+  void    print_status(Bus_obj*);
 
   uint8_t read_IE(Bus_obj*);
   uint8_t read_IF(Bus_obj*);

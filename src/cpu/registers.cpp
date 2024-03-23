@@ -225,7 +225,7 @@ uint8_t Registers::read_F(){
 
 */
 void Registers::write_F(uint8_t data){
-  registers[6] = data;
+  registers[6] = (data & 0xf0);
 }
 
 /** Registers::read_A
