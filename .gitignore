@@ -35,3 +35,6 @@ ex
 
 # Developement
 ROM/
+build/
+cmake/
+.cache/
