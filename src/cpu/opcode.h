@@ -100,6 +100,7 @@
 
 #define RET_OPCODE 0xc9
 #define RETI_OPCODE 0xd9
+#define JP_HL_OPCODE 0xe9
 
 #define CB_OPCODE 0xcb
 #define CB_BLOCK0_OPCODE "00xxxxxx"

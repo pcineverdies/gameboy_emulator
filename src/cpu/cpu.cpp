@@ -104,17 +104,21 @@ void Cpu::step(Bus_obj* bus){
     Handles interrupts before the fetch stage.
 
     @param bus Bus_obj* pointer to a bus to use for reading
+    @return bool whether the interrupt is handled or not
 
 */
 bool Cpu::interrupt_handler(Bus_obj* bus){
 
+  // If in fetch stage, check if an interrupt is to be handled or not
   if(_state == State::STATE_1){
 
     uint8_t IE = read_IE(bus);
     uint8_t IF = read_IF(bus);
 
+    // No interrupt to handle
     if(IME == 0 or ((IE & IF) == 0)) return false;
 
+    // Out from halted state
     if(_is_halted){
       _is_halted = 0;
       registers.PC++;
@@ -122,34 +126,45 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
 
     IME = 0;
 
-    if     (IE & IF & 0x01) _interrupt_to_handle = 0;
-    else if(IE & IF & 0x02) _interrupt_to_handle = 1;
-    else if(IE & IF & 0x04) _interrupt_to_handle = 2;
-    else if(IE & IF & 0x08) _interrupt_to_handle = 3;
-    else if(IE & IF & 0x10) _interrupt_to_handle = 4;
+    // TODO: This check should be handled in a later stage of
+    // the interrupt. Some games might not work due to this.
+    if     (IE & IF & 0x01) _interrupt_to_handle = 0; // Vblank
+    else if(IE & IF & 0x02) _interrupt_to_handle = 1; // LCD
+    else if(IE & IF & 0x04) _interrupt_to_handle = 2; // Timer
+    else if(IE & IF & 0x08) _interrupt_to_handle = 3; // Serial
+    else if(IE & IF & 0x10) _interrupt_to_handle = 4; // Joypad
 
+    // Remove the interrupt request from IF
     write_IF(bus, IF & ~(1 << _interrupt_to_handle));
     _state = State::STATE_I_2;
 
     return true;
   }
+
+  // Skip one state
   else if(_state == State::STATE_I_2){
     _state = State::STATE_I_3;
 
     return true;
   }
+
+  // Write the msbs of PC on the stack
   else if(_state == State::STATE_I_3){
     bus->write(--registers.SP, registers.PC >> 8);
     _state = State::STATE_I_4;
 
     return true;
   }
+
+  // Write the lsbs of PC on the stack
   else if(_state == State::STATE_I_4){
     bus->write(--registers.SP, registers.PC & 0x00ff);
     _state = State::STATE_I_5;
 
     return true;
   }
+
+  // Modify the program counter according to the interrupt that is handled.
   else if(_state == State::STATE_I_5){
 
     registers.PC = 0x40 + 0x08 * _interrupt_to_handle;
