@@ -15,9 +15,9 @@ protected:
 
   uint16_t frequency;
 
+public:
   std::string name;
 
-public:
   Bus_obj(std::string, uint16_t, uint16_t);
   uint16_t get_size();
   uint16_t get_init_addr();

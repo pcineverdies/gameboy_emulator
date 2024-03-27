@@ -182,6 +182,12 @@ void Cpu::write_IF(Bus_obj* bus, uint8_t data){
   bus->write(IF_ADDRESS, data);
 }
 
+/** CPU::print_status
+    Print status of the CPU according to peach's format
+
+    @param bus Bus_obj* pointer to a bus to use for writing
+
+*/
 void Cpu::print_status(Bus_obj* bus){
   printf(
     "A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
@@ -200,4 +206,27 @@ void Cpu::print_status(Bus_obj* bus){
     bus->read(registers.PC + 2),
     bus->read(registers.PC + 3)
   );
+}
+
+/** CPU::print_serial
+    Reads the content of the serial register (memory mapped at 0xff01)
+    and prints it on the screen if the value is different from the previous one.
+    This is usefule for an early-debugging phase, though it cannot be
+    used to properly get the content to be sent on the serial port.
+
+    @param bus Bus_obj* pointer to a bus to use for writing
+
+*/
+void Cpu::print_serial(Bus_obj* bus){
+  // Remembers previous read character
+  static char prev = 0;
+
+  // Read current character
+  char val = bus->read(0xff01);
+
+  // Print if different
+  if(val != prev){
+    printf("%c", val);
+    prev = val;
+  }
 }

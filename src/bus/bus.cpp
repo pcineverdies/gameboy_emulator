@@ -44,13 +44,14 @@ void Bus::add_to_bus(Bus_obj* new_object){
   if(new_object->get_size() != 0){
 
     for(auto& obj : bus_objects){
+      if(obj->get_size() == 0) continue;
       uint16_t N_i = new_object->get_init_addr();
       uint16_t N_l = new_object->get_last_addr();
       uint16_t P_i = obj->get_init_addr();
       uint16_t P_l = obj->get_last_addr();
 
       if((N_i <= P_i and N_l >= P_i) or (N_i >= P_i and N_i <= P_l) or (N_i >= P_i and N_l <= P_l) or (N_i <= P_i and P_l <= N_l))
-        throw std::invalid_argument("Overlap in address space");
+        throw std::invalid_argument("Overlap in address space between " + obj->name + " and " + new_object->name);
     }
   }
 

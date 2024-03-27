@@ -767,6 +767,7 @@ void Cpu::execute_control_misc(Bus_obj* bus){
 
   if(_opcode == HALT_OPCODE){
     halt_handler(bus);
+    return;
   }
 
   // ============================================================================
@@ -1111,6 +1112,7 @@ void Cpu::halt_handler(Bus_obj* bus){
     else{
       registers.PC--;
     }
+    return;
   }
 
   // If IME == 0 and it was not in halt mode, then enter halt

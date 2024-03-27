@@ -128,11 +128,11 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
 
     // TODO: This check should be handled in a later stage of
     // the interrupt. Some games might not work due to this.
-    if     (IE & IF & 0x01) _interrupt_to_handle = 0; // Vblank
-    else if(IE & IF & 0x02) _interrupt_to_handle = 1; // LCD
-    else if(IE & IF & 0x04) _interrupt_to_handle = 2; // Timer
-    else if(IE & IF & 0x08) _interrupt_to_handle = 3; // Serial
-    else if(IE & IF & 0x10) _interrupt_to_handle = 4; // Joypad
+    if     (IE & IF & IF_VBLANK) _interrupt_to_handle = 0; // Vblank
+    else if(IE & IF & IF_LCD)    _interrupt_to_handle = 1; // LCD
+    else if(IE & IF & IF_TIMER)  _interrupt_to_handle = 2; // Timer
+    else if(IE & IF & IF_SERIAL) _interrupt_to_handle = 3; // Serial
+    else if(IE & IF & IF_JOYPAD) _interrupt_to_handle = 4; // Joypad
 
     // Remove the interrupt request from IF
     write_IF(bus, IF & ~(1 << _interrupt_to_handle));
