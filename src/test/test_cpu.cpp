@@ -1,7 +1,9 @@
 #include "../bus/bus.h"
 #include "../memory/memory.h"
+#include "../memory/memory_map.h"
 #include "../cpu/cpu.h"
 #include "../cpu/registers.h"
+#include "../memory/register.h"
 #include <cassert>
 
 int main(){
@@ -245,6 +247,78 @@ int main(){
     assert(cpu.get_registers().PC == 0x01fa);
 
     printf("-> TEST5 terminated succesfully\n");
+
+  }
+
+  {
+
+    // TEST 6
+    Bus    bus("Bus", 0, 0xffff, 8000);
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    Memory HRAM("ROM_00", 0xff80, 0x007f);
+    Memory IO("IO", 0xff00, 0x0080);
+    Register IE("IE", 0xffff);
+    Cpu    cpu("cpu", 2000);
+
+    bus.add_to_bus(&ROM_00);
+    bus.add_to_bus(&HRAM);
+    bus.add_to_bus(&IO);
+    bus.add_to_bus(&IE);
+    bus.add_to_bus(&cpu);
+
+    bus.write(0x100, 0x3e);
+    bus.write(0x101, 0x16);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    bus.write(IE_ADDRESS, 0x02);
+    bus.write(IF_ADDRESS, 0x03);
+
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().PC == 0x48);
+
+    bus.write(0x048, 0xc1);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().read_BC() == 0x102);
+
+    bus.write(0x049, 0xc5);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    bus.write(0x04a, 0xc9);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+    cpu.step(&bus);
+
+    assert(cpu.get_registers().PC == 0x102);
+
+    printf("-> TEST6 terminated succesfully\n");
+
+  }
+
+  {
+
+    // TEST 7
+    Memory ROM_00("ROM_00", 0, 0x1000);
+    ROM_00.init_from_file(0x0100, "ROM/test.gb");
+
+    assert(ROM_00.read(0x100) == 'a');
+    assert(ROM_00.read(0x101) == 'b');
+    assert(ROM_00.read(0x102) == 'c');
+
+    printf("-> TEST7 terminated succesfully\n");
+
   }
 
   printf("-> All test terminated succesfully\n");
