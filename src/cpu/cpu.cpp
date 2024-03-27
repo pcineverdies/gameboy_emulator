@@ -64,7 +64,7 @@ void Cpu::step(Bus_obj* bus){
       _ei_delayed = 0;
     }
 
-    print_status(bus);
+    //print_status(bus);
     _opcode = fetch(bus);
 
     if(_halt_bug == 1){

@@ -207,26 +207,3 @@ void Cpu::print_status(Bus_obj* bus){
     bus->read(registers.PC + 3)
   );
 }
-
-/** CPU::print_serial
-    Reads the content of the serial register (memory mapped at 0xff01)
-    and prints it on the screen if the value is different from the previous one.
-    This is usefule for an early-debugging phase, though it cannot be
-    used to properly get the content to be sent on the serial port.
-
-    @param bus Bus_obj* pointer to a bus to use for writing
-
-*/
-void Cpu::print_serial(Bus_obj* bus){
-  // Remembers previous read character
-  static char prev = 0;
-
-  // Read current character
-  char val = bus->read(0xff01);
-
-  // Print if different
-  if(val != prev){
-    printf("%c", val);
-    prev = val;
-  }
-}
