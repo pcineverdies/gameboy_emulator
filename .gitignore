@@ -38,3 +38,5 @@ ROM/
 build/
 cmake/
 .cache/
+compile.bash
+TODO.md
