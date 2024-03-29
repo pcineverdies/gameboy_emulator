@@ -64,12 +64,7 @@ void Cpu::step(Bus_obj* bus){
       _ei_delayed = 0;
     }
 
-    //print_status(bus);
     _opcode = fetch(bus);
-
-    // printf("%04x\n", registers.PC);
-    // printf("%02x\n", _opcode);
-
 
     if(_halt_bug == 1){
       registers.PC--;

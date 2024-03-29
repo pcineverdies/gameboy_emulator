@@ -88,7 +88,7 @@ uint8_t Bus::read(uint16_t addr){
       return bus_obj->read(addr - init_addr);
   }
 
-  printf("Attempt to read from invalid location: %04x\n", addr);
+  // printf("Attempt to read from invalid location: %04x\n", addr);
   return 0;
 }
 
@@ -116,7 +116,7 @@ void Bus::write(uint16_t addr, uint8_t data){
     }
   }
 
-  printf("Attempt to write in invalid location: %04x\n", addr);
+  // printf("Attempt to write in invalid location: %04x\n", addr);
 }
 
 /** Bus::step
@@ -126,13 +126,16 @@ void Bus::write(uint16_t addr, uint8_t data){
 */
 void Bus::step(Bus_obj* bus){
 
+
+
   for(auto& bus_obj : bus_objects){
 
     // Cannot step asynchronous objects, such as memories
     if(bus_obj->get_frequency() == 0) continue;
 
-    if(current_cc % (this->get_frequency() / bus_obj->get_frequency()) == 0)
+    if(current_cc % (this->get_frequency() / bus_obj->get_frequency()) == 0){
       bus_obj->step(bus);
+    }
 
   }
 
