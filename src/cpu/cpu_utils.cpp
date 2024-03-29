@@ -72,7 +72,7 @@ bool Cpu::get_jump_condition(uint8_t opcode){
   if(check_mask(opcode, "xxx01xxx") and registers.get_Z() == 1) return true;
   if(check_mask(opcode, "xxx10xxx") and registers.get_C() == 0) return true;
   if(check_mask(opcode, "xxx11xxx") and registers.get_C() == 1) return true;
-                                                                return false;
+  return false;
 }
 
 /** CPU::get_registers
@@ -107,7 +107,8 @@ uint8_t Cpu::read_x8(Bus_obj* bus, uint8_t index){
   if(index >= 8) throw std::runtime_error("Register index is not valid");
 
   if(index != 6) return registers.registers[index];
-                 return bus->read(registers.read_HL());
+
+  return bus->read(registers.read_HL());
 }
 
 /** CPU::write_x8

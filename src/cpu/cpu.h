@@ -48,13 +48,13 @@ class Cpu : public Bus_obj{
   uint8_t fetch(Bus_obj*);
 
   // Decode and execute functions
-  void execute_invalid(Bus_obj*);
-  void execute_x8_lsm(Bus_obj*);
-  void execute_x16_lsm(Bus_obj*);
-  void execute_x8_alu(Bus_obj*);
-  void execute_x16_alu(Bus_obj*);
-  void execute_control_br(Bus_obj*);
-  void execute_control_misc(Bus_obj*);
+  bool execute_invalid(Bus_obj*);
+  bool execute_x8_lsm(Bus_obj*);
+  bool execute_x16_lsm(Bus_obj*);
+  bool execute_x8_alu(Bus_obj*);
+  bool execute_x16_alu(Bus_obj*);
+  bool execute_control_br(Bus_obj*);
+  bool execute_control_misc(Bus_obj*);
   void execute_x8_rsb(Bus_obj*);
   bool interrupt_handler(Bus_obj*);
   void halt_handler(Bus_obj*);
@@ -94,8 +94,8 @@ public:
   void step(Bus_obj*);
 
   // Compliance with parent class, not employed
-  uint8_t read(uint16_t a){return 0;}
-  void write(uint16_t a, uint8_t d){}
+  uint8_t read(uint16_t){return 0;}
+  void write(uint16_t, uint8_t){}
 
   // Get all the registers (debug purposes)
   Registers get_registers();

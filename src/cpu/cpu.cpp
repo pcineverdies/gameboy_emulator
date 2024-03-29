@@ -67,6 +67,10 @@ void Cpu::step(Bus_obj* bus){
     //print_status(bus);
     _opcode = fetch(bus);
 
+    // printf("%04x\n", registers.PC);
+    // printf("%02x\n", _opcode);
+
+
     if(_halt_bug == 1){
       registers.PC--;
       _halt_bug = 0;
@@ -90,13 +94,13 @@ void Cpu::step(Bus_obj* bus){
 
   else{
     // Try to match the opcode within all the possible categories of instrcutions.
-    execute_invalid(bus);
-    execute_x8_lsm(bus);
-    execute_x16_lsm(bus);
-    execute_x8_alu(bus);
-    execute_x16_alu(bus);
-    execute_control_br(bus);
-    execute_control_misc(bus);
+    if(execute_control_misc(bus)) return;
+    if(execute_control_br(bus)) return;
+    if(execute_x8_alu(bus)) return;
+    if(execute_x8_lsm(bus)) return;
+    if(execute_x16_lsm(bus)) return;
+    if(execute_x16_alu(bus)) return;
+    if(execute_invalid(bus)) return;
   }
 }
 

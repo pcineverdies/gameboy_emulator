@@ -5,10 +5,11 @@
     Check whether the provided instruction is invalid
 
     @param bus Bus_obj* pointer to a bus to use for reading
-    @param  uint8_t opcode of the instruction to run
+    @param uint8_t opcode of the instruction to run
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_invalid(Bus_obj* bus){
+bool Cpu::execute_invalid(Bus_obj*){
   if(_opcode == INVALID_OPCODE_1  or _opcode == INVALID_OPCODE_2  or
     _opcode ==  INVALID_OPCODE_3  or _opcode == INVALID_OPCODE_4  or
     _opcode ==  INVALID_OPCODE_5  or _opcode == INVALID_OPCODE_6  or
@@ -16,6 +17,9 @@ void Cpu::execute_invalid(Bus_obj* bus){
     _opcode ==  INVALID_OPCODE_9  or _opcode == INVALID_OPCODE_10 or
     _opcode ==  INVALID_OPCODE_11
   ) throw std::runtime_error("Parsed invalid opcode");
+
+  return false;
+
 }
 
 /** CPU::execute_x8_lsm
@@ -24,9 +28,10 @@ void Cpu::execute_invalid(Bus_obj* bus){
 
     @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_x8_lsm(Bus_obj* bus){
+bool Cpu::execute_x8_lsm(Bus_obj* bus){
 
   uint8_t xx  = get_xx(_opcode);
   uint8_t yyy = get_yyy(_opcode);
@@ -55,6 +60,8 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_r_U8");
+
+    return true;
   }
 
   // ============================================================================
@@ -75,6 +82,8 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_m_A");
+
+    return true;
   }
 
   // ============================================================================
@@ -100,6 +109,8 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_r_r");
+
+    return true;
   }
 
   // ============================================================================
@@ -123,6 +134,8 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_ff00_u8");
+
+    return true;
   }
 
   // ============================================================================
@@ -141,6 +154,8 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD");
+
+    return true;
   }
 
   // ============================================================================
@@ -167,9 +182,13 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_u16_A");
+
+    return true;
   }
 
   // ============================================================================
+
+  return false;
 
 }
 
@@ -179,9 +198,10 @@ void Cpu::execute_x8_lsm(Bus_obj* bus){
 
     @param bus Bus_obj* pointer to a bus to use for reading
     @param  uint8_t opcode of the instruction to run
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_x16_lsm(Bus_obj* bus){
+bool Cpu::execute_x16_lsm(Bus_obj* bus){
 
   // ============================================================================
 
@@ -202,6 +222,8 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD");
+
+    return true;
   }
 
   // ============================================================================
@@ -223,6 +245,8 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction POP");
+
+    return true;
   }
 
   // ============================================================================
@@ -249,6 +273,8 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction PUSH");
+
+    return true;
   }
 
   // ============================================================================
@@ -274,6 +300,8 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_u16_SP");
+
+    return true;
   }
 
   // ============================================================================
@@ -286,10 +314,14 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
       registers.SP = registers.read_HL();
       _state = State::STATE_1;
     }
+
+    return true;
   }
   else std::runtime_error("Invalid state reached for instruction LD_SP_HL");
 
   // ============================================================================
+
+  return false;
 
 }
 
@@ -297,11 +329,11 @@ void Cpu::execute_x16_lsm(Bus_obj* bus){
     Decodes and runs all the instructions in the category x8_alu
 
     @param bus Bus_obj* pointer to a bus to use for reading
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_x8_alu(Bus_obj* bus){
+bool Cpu::execute_x8_alu(Bus_obj* bus){
 
-  uint8_t xx  = get_xx(_opcode);
   uint8_t yyy = get_yyy(_opcode);
   uint8_t zzz = get_zzz(_opcode);
   uint8_t A = registers.read_A();
@@ -336,6 +368,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
       }
       else std::runtime_error("Invalid state reached for instruction INC");
     }
+
+    return true;
   }
 
   // ============================================================================
@@ -346,6 +380,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_H(0);
     registers.set_C(A & 0x80);
     registers.write_A(A << 1 | A >> 7);
+
+    return true;
   }
 
   // ============================================================================
@@ -356,6 +392,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_N(0);
     registers.set_H(0);
     registers.set_C(A & 0x80);
+
+    return true;
   }
 
   // ============================================================================
@@ -375,6 +413,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
 
     registers.set_H(0);
     registers.set_Z(registers.read_A() == 0);
+
+    return true;
   }
 
   // ============================================================================
@@ -383,6 +423,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_N(0);
     registers.set_H(0);
     registers.set_C(1);
+
+    return true;
   }
 
   // ============================================================================
@@ -393,6 +435,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_N(0);
     registers.set_H(0);
     registers.set_C(A & 0x01);
+
+    return true;
   }
 
   // ============================================================================
@@ -403,6 +447,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_N(0);
     registers.set_H(0);
     registers.set_C(A & 0x01);
+
+    return true;
   }
 
   // ============================================================================
@@ -411,6 +457,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.write_A(~A);
     registers.set_N(1);
     registers.set_H(1);
+
+    return true;
   }
 
   // ============================================================================
@@ -419,6 +467,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     registers.set_N(0);
     registers.set_H(0);
     registers.set_C(registers.get_C() == 1 ? 0 : 1);
+
+    return true;
   }
 
   // ============================================================================
@@ -439,6 +489,8 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
       }
       else std::runtime_error("Invalid state reached for instruction ALU");
     }
+
+    return true;
   }
 
   // ============================================================================
@@ -453,9 +505,13 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction ALU_u8");
+
+    return true;
   }
 
   // ============================================================================
+
+  return false;
 
 }
 
@@ -463,9 +519,10 @@ void Cpu::execute_x8_alu(Bus_obj* bus){
     Decodes and runs all the instructions in the category x16_alu
 
     @param bus Bus_obj* pointer to a bus to use for reading
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_x16_alu(Bus_obj* bus){
+bool Cpu::execute_x16_alu(Bus_obj* bus){
 
   // ============================================================================
 
@@ -485,6 +542,8 @@ void Cpu::execute_x16_alu(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction ALU_16_INC_DEC");
+
+    return true;
   }
 
   // ============================================================================
@@ -510,6 +569,8 @@ void Cpu::execute_x16_alu(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction ADD");
+
+    return true;
   }
 
   // ============================================================================
@@ -543,13 +604,23 @@ void Cpu::execute_x16_alu(Bus_obj* bus){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction ADD/LD");
+
+    return true;
   }
 
   // ============================================================================
 
+  return false;
 }
 
-void Cpu::execute_control_br(Bus_obj* bus ){
+/** CPU::execute_control_br
+    Decodes and runs all the instructions in the category control_br
+
+    @param bus Bus_obj* pointer to a bus to use for reading
+    @return bool true if an instruction has been executed
+
+*/
+bool Cpu::execute_control_br(Bus_obj* bus ){
 
   // ============================================================================
 
@@ -573,6 +644,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
 
     }
     else std::runtime_error("Invalid state reached for instruction JR cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -592,6 +665,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
 
     }
     else std::runtime_error("Invalid state reached for instruction JR cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -621,6 +696,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction RET cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -647,6 +724,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction JP cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -681,6 +760,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction CALL cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -703,6 +784,8 @@ void Cpu::execute_control_br(Bus_obj* bus ){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction CALL cond");
+
+    return true;
   }
 
   // ============================================================================
@@ -731,15 +814,21 @@ void Cpu::execute_control_br(Bus_obj* bus ){
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction CALL cond");
+
+    return true;
   }
 
   // ============================================================================
 
   if(_opcode == JP_HL_OPCODE){
     registers.PC = registers.read_HL();
+
+    return true;
   }
 
   // ============================================================================
+
+  return false;
 
 }
 
@@ -747,43 +836,49 @@ void Cpu::execute_control_br(Bus_obj* bus ){
     Decodes and runs all the instructions in the category control_misc
 
     @param bus Bus_obj* pointer to a bus to use for reading
+    @return bool true if an instruction has been executed
 
 */
-void Cpu::execute_control_misc(Bus_obj* bus){
+bool Cpu::execute_control_misc(Bus_obj* bus){
 
   // ============================================================================
 
   if(_opcode == NOP_OPCODE){
-    return;
+    return true;
   }
 
   // ============================================================================
 
   if(_opcode == STOP_OPCODE){
-    return; // Not used in DMG
+    return true; // Not used in DMG
   }
 
   // ============================================================================
 
   if(_opcode == HALT_OPCODE){
     halt_handler(bus);
-    return;
+    return true;
   }
 
   // ============================================================================
 
   if(_opcode == DI_OPCODE){
     IME = 0;
+
+    return true;
   }
 
   // ============================================================================
 
   if(_opcode == EI_OPCODE){
     _ei_delayed = 1;
+
+    return true;
   }
 
   // ============================================================================
 
+  return false;
 }
 
 /** CPU::execute_x8_rsb
