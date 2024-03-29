@@ -68,7 +68,7 @@ void PPU::step(Bus_obj* bus){
 
   if(!is_PPU_on()){
     display->clear(0xffffffff);
-    reset();
+    // reset();
     return;
   }
 

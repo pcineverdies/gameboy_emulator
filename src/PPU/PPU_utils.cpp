@@ -2,21 +2,23 @@
 #include "PPU_def.h"
 #include <cstdint>
 #include <cstdio>
+#include <iostream>
+#include <chrono>
 
 void PPU::reset(){
 
-  LCDC = 0;
-  STAT = 0;
-  SCY = 0;
-  SCX = 0;
-  LY = 0;
-  LYC = 0;
-  DMA = 0;
-  BGP = 0;
-  OBP0 = 0;
-  OBP1 = 0;
-  WX = 0;
-  WY = 0;
+  LCDC  = 0x91;
+  STAT  = 0x85;
+  SCY   = 0;
+  SCX   = 0;
+  LY    = 0;
+  LYC   = 0;
+  DMA   = 0xff;
+  BGP   = 0xfc;
+  OBP0  = 0;
+  OBP1  = 0;
+  WX    = 0;
+  WY    = 0;
 
   _DMA_bytes_to_transfer = 0;
   _DMA_cycles_to_wait = 0;
@@ -24,6 +26,7 @@ void PPU::reset(){
   _OAM_SCAN_to_wait = 0;
   _OAM_SCAN_fetched = 0;
   _OAM_SCAN_addr = 0;
+
   for(int i = 0; i < OAM_BUFFER_SIZE_BYTE; i++) _OAM_SCAN_buffer[i] = 0;
 
   _state = State::STATE_MODE_2;
@@ -124,12 +127,13 @@ void PPU::DRAWING_step(Bus_obj* bus){
 
   uint16_t background_map_address = (LCDC & PPU_LCDC_B_TILE_MAP_MASK) ? 0x9C00 : 0x9800;
   uint16_t window_map_address     = (LCDC & PPU_LCDC_W_TILE_MAP_MASK) ? 0x9C00 : 0x9800;
-  uint16_t tile_index;
-  uint16_t tile_index_offset;
+  uint16_t tile_index_x;
+  uint16_t tile_index_y;
   uint16_t tile_number;
   uint16_t tile_address;
   uint8_t upper_tile;
   uint8_t lower_tile;
+  uint8_t color_to_use;
 
   _DRAWING_to_wait--;
 
@@ -138,26 +142,34 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // For each pixel in the line
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
-    tile_index_offset = (((SCX + x)/8) & 0x1f);
-    tile_index_offset += (32 * (((LY + SCY) & 0xFF) / 8));
-    tile_index = background_map_address + tile_index_offset;
-    tile_number = bus->read(tile_index);
+    // Horizontal tile index is (SCX + x) / 8,
+    // anded with 0x1f to allow horizontal scrolling
+    tile_index_x = ((SCX + x) / 8) & 0x1f;
 
-    if(LCDC & PPU_LCDC_T_DATA_SEL_MASK)
-      tile_address = 0x8000 + tile_number * 16;
-    else
-      tile_address = 0x9000 + (signed char)tile_number * 16;
+    // Vertical tile index is (LY + y) / 8,
+    // anded with 0xff to allow vertical scrolling
+    tile_index_y = ((LY + SCY) & 0xff) / 8;
 
-    tile_address+= (2 * ((LY + SCY) % 8));
+    // The offset of the tile index can be obtained by x + y * 32
+    tile_number = bus->read(background_map_address + tile_index_y * 32 + tile_index_x);
+
+    // Tile address is computed in different ways depending on LCDC
+    if(LCDC & PPU_LCDC_T_DATA_SEL_MASK) tile_address = 0x8000 +              tile_number * 16;
+    else                                tile_address = 0x9000 + (signed char)tile_number * 16;
+
+    // Each tile is made of 16 bytes, 2 per row, for a total of 8 rows. We need to pick the row
+    // (LY + SCY) % 8
+    tile_address += (2 * ((LY + SCY) % 8));
+
+    // Get the two tiles
     lower_tile = bus->read(tile_address);
     upper_tile = bus->read(tile_address + 1);
 
-    uint8_t mask = 1 << (7 - (x%8));
+    color_to_use = 0;
+    if(lower_tile & (1 << (7 - (x % 8)))) color_to_use |= 0x02;
+    if(upper_tile & (1 << (7 - (x % 8)))) color_to_use |= 0x01;
 
-    if((lower_tile & mask) and (upper_tile & mask)) display->update(x, LY,   0x000000ff);
-    else if(!(lower_tile & mask) and (upper_tile & mask)) display->update(x, LY,  0x5a5a5aff);
-    else if((lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY,  0x808080ff);
-    else if(!(lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY, 0xffffffff);
+    display->update(x, LY, get_color_bg_win(color_to_use));
 
   }
 
@@ -177,17 +189,15 @@ void PPU::HBLANK_step(Bus_obj* bus){
   // Next scanline
   LY++;
 
+  // Enter VBLANK
   if(LY == SCREEN_HEIGHT){
-    _state = State::STATE_MODE_1;
-
     set_vblank_interrupt(bus);
-
+    _state = State::STATE_MODE_1;
     _VBLANK_padding_to_wait = VBLANK_LINE_WAIT;
   }
+  // Enter OAM
   else{
-
     _state = State::STATE_MODE_2;
-
     _OAM_SCAN_to_wait = 0;
     _OAM_SCAN_fetched = 0;
     _OAM_SCAN_addr = 0;
@@ -196,9 +206,14 @@ void PPU::HBLANK_step(Bus_obj* bus){
   return;
 }
 
+
 void PPU::VBLANK_step(Bus_obj*){
 
+  // FPS counter variables
   static int counter = 0;
+  static auto start = std::chrono::system_clock::now();
+  static auto end = std::chrono::system_clock::now();
+
   _VBLANK_padding_to_wait--;
 
   // Pseudo-scanline still to go
@@ -212,8 +227,15 @@ void PPU::VBLANK_step(Bus_obj*){
 
   // If 10 pseudo-scanlines have been handled, move to new frame
   if(LY == SCREEN_HEIGHT + VBLANK_PSEUDO_LINES){
+
+    // FPS counting
     counter++;
-    if(counter % 60 == 0) printf("BV: %d\n", counter);
+    if(counter % 60 == 0){
+      end =  std::chrono::system_clock::now();
+      auto elapsed = end - start;
+      std::cout << "FPS\t" << 60*((float)(1000000000)/(elapsed.count())) << '\n';
+      start =  std::chrono::system_clock::now();
+    }
     _state = State::STATE_MODE_2;
     LY = 0;
   }
@@ -272,5 +294,19 @@ void PPU::STAT_handler(Bus_obj* bus){
   if(_state == State::STATE_MODE_1) STAT = (STAT & 0b11111100) | 0b01;
   if(_state == State::STATE_MODE_2) STAT = (STAT & 0b11111100) | 0b10;
   if(_state == State::STATE_MODE_3) STAT = (STAT & 0b11111100) | 0b11;
+
+}
+
+uint32_t PPU::get_color_bg_win(uint8_t tile){
+
+  uint8_t index = (tile == 0) ? (BGP & 0b00000011)      :
+                  (tile == 1) ? (BGP & 0b00001100) >> 2 :
+                  (tile == 2) ? (BGP & 0b00110000) >> 4 :
+                                (BGP & 0b11000000) >> 6 ;
+
+  return  (index == 0) ? PPU_PALETTE_WHITE      :
+          (index == 1) ? PPU_PALETTE_LIGHT_GREY :
+          (index == 2) ? PPU_PALETTE_DARK_GREY  :
+                         PPU_PALETTE_BLACK;
 
 }

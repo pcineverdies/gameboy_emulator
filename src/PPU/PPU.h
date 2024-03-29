@@ -63,6 +63,7 @@ class PPU : public Bus_obj {
   void reset();
   void STAT_handler(Bus_obj*);
   uint8_t get_sprite_height();
+  uint32_t get_color_bg_win(uint8_t);
 
 public:
 
