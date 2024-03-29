@@ -15,6 +15,10 @@ class Display {
   uint8_t height;
   uint8_t scale_factor;
 
+  // Do not clear the screen again if the operation was already performed
+  // and there were no changes in the meanwhile
+  bool last_cleared;
+
 public:
         Display(uint8_t, uint8_t, uint8_t);
   void  update(uint8_t, uint8_t, uint32_t);

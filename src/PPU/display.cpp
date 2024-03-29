@@ -19,6 +19,7 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
   width = W;
   height = H;
   scale_factor = S;
+  last_cleared = false;
 
   // Init SDL
   if(SDL_Init(SDL_INIT_VIDEO) != 0){
@@ -71,6 +72,8 @@ void Display::update(uint8_t x, uint8_t y, uint32_t color){
 
   // Render modifications
   SDL_RenderPresent(this->renderer);
+
+  last_cleared = false;
 }
 
 /** Display::clear
@@ -79,6 +82,8 @@ void Display::update(uint8_t x, uint8_t y, uint32_t color){
     @param color uint32_t color to use to clear
 */
 void Display::clear(uint32_t color){
+
+  if(last_cleared) return;
 
   SDL_SetRenderDrawColor(this->renderer,
                          (color >> 24) & 0xff,
@@ -94,6 +99,8 @@ void Display::clear(uint32_t color){
 
   // Render modifications
   SDL_RenderPresent(this->renderer);
+
+  last_cleared = true;
 }
 
 /** Display::~Display
