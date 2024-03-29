@@ -138,9 +138,8 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // For each pixel in the line
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
-    tile_index_offset = ((x + SCX) & 0x1f);
+    tile_index_offset = (((SCX + x)/8) & 0x1f);
     tile_index_offset += (32 * (((LY + SCY) & 0xFF) / 8));
-    tile_index_offset &= 0x3ff;
     tile_index = background_map_address + tile_index_offset;
     tile_number = bus->read(tile_index);
 
@@ -156,9 +155,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
     uint8_t mask = 1 << (7 - (x%8));
 
     if((lower_tile & mask) and (upper_tile & mask)) display->update(x, LY,   0x000000ff);
-    if(!(lower_tile & mask) and (upper_tile & mask)) display->update(x, LY,  0x5a5a5aff);
-    if((lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY,  0x808080ff);
-    if(!(lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY, 0xffffffff);
+    else if(!(lower_tile & mask) and (upper_tile & mask)) display->update(x, LY,  0x5a5a5aff);
+    else if((lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY,  0x808080ff);
+    else if(!(lower_tile & mask) and !(upper_tile & mask)) display->update(x, LY, 0xffffffff);
 
   }
 
@@ -197,7 +196,7 @@ void PPU::HBLANK_step(Bus_obj* bus){
   return;
 }
 
-void PPU::VBLANK_step(Bus_obj* bus){
+void PPU::VBLANK_step(Bus_obj*){
 
   static int counter = 0;
   _VBLANK_padding_to_wait--;

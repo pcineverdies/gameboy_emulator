@@ -71,6 +71,7 @@ void Display::update(uint8_t x, uint8_t y, uint32_t color){
   }
 
   // Render modifications
+  if(x == width - 1 and y == height - 1)
   SDL_RenderPresent(this->renderer);
 
   last_cleared = false;
