@@ -1,4 +1,8 @@
 #include "bus.h"
+#include <chrono>
+#include <thread>
+#include <iostream>
+#include <unistd.h>
 
 /** Bus::Bus
     Constructor of the class. It just calls the parent constructor.
@@ -84,6 +88,7 @@ uint8_t Bus::read(uint16_t addr){
       return bus_obj->read(addr - init_addr);
   }
 
+  printf("Attempt to read from invalid location: %04x\n", addr);
   return 0;
 }
 
@@ -111,6 +116,7 @@ void Bus::write(uint16_t addr, uint8_t data){
     }
   }
 
+  printf("Attempt to write in invalid location: %04x\n", addr);
 }
 
 /** Bus::step
@@ -131,6 +137,5 @@ void Bus::step(Bus_obj* bus){
   }
 
   current_cc++;
-  // TOOD PAUSE
 
 }

@@ -10,8 +10,6 @@
 */
 uint8_t Joypad::read(uint16_t addr){
 
-  uint8_t res;
-
   if(addr != 0)
     std::invalid_argument("Invalid address while acessing joypad");
 
@@ -63,8 +61,6 @@ Joypad::Joypad(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 
 void Joypad::step(Bus_obj* bus){
 
   uint8_t activate_interrupt = 0;
-
-  uint8_t prev_joyp = JOYP;
 
   if(key_is_pressed(JOYPAD_QUIT_BUTTON)){
     exit(1);
@@ -131,12 +127,9 @@ bool Joypad::key_is_pressed(uint8_t ks) {
   const Uint8* state = SDL_GetKeyboardState(nullptr);
   SDL_Event e;
 
-  uint8_t counter_iterations = 0;
-
   // TODO: Avoid this loop and add counter
   while ((SDL_PollEvent(&e)) != 0){
     if(e.type == SDL_KEYDOWN) break;
-    counter_iterations++;
   }
 
   return state[ks];

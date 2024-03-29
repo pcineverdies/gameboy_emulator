@@ -10,7 +10,7 @@
 */
 uint8_t Serial::read(uint16_t addr){
 
-  uint8_t res;
+  uint8_t res = 0;
 
   if(addr == 0){
     res = SB;
@@ -69,7 +69,7 @@ Serial::Serial(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 
     @param bus Bus_obj* pointer to a bus to use for reading
 
 */
-void Serial::step(Bus_obj* bus){}
+void Serial::step(Bus_obj*){}
 
 /** Serial::set_interrupt
     Set the corresponding interrupt flag in the IF register.

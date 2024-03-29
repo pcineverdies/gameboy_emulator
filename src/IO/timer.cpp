@@ -10,7 +10,7 @@
 */
 uint8_t Timer::read(uint16_t addr){
 
-  uint8_t res;
+  uint8_t res = 0;
 
   // Only 8 msbs of DIV are accessible
   if(addr == 0){
