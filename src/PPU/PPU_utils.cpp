@@ -28,6 +28,7 @@ void PPU::reset(){
   _OAM_SCAN_addr = 0;
 
   _DRAWING_window_condition = 0;
+  _DRAWING_window_line_counter = 0;
 
   for(int i = 0; i < OAM_BUFFER_SIZE_BYTE; i++) _OAM_SCAN_buffer[i] = 0;
 
@@ -87,8 +88,8 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
   current_address = OAM_INIT_ADDR | _OAM_SCAN_addr;
 
   // Fetch the 4 bytes
-  obj_X_pos =       bus->read(current_address);
-  obj_Y_pos =       bus->read(current_address + 1);
+  obj_Y_pos =       bus->read(current_address);
+  obj_X_pos =       bus->read(current_address + 1);
   obj_tile_number = bus->read(current_address + 2);
   obj_sprite_flag = bus->read(current_address + 3);
 
@@ -96,13 +97,10 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
   _OAM_SCAN_addr += 4;
 
   // If all the conditions are valid, then the object is to be added to the OAM buffer
-  if( _OAM_SCAN_fetched != OAM_BUFFER_SIZE_OBJ and
-      obj_X_pos > 0 and
-      LY + 16 >= obj_Y_pos and
-      LY + 16 < obj_Y_pos + get_sprite_height())
-  {
-    _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4    ] = obj_X_pos;
-    _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4 + 1] = obj_Y_pos;
+  if( _OAM_SCAN_fetched != OAM_BUFFER_SIZE_OBJ and obj_X_pos > 0 and
+    LY + 16 >= obj_Y_pos and LY + 16 < obj_Y_pos + get_sprite_height()){
+    _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4    ] = obj_Y_pos;
+    _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4 + 1] = obj_X_pos;
     _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4 + 2] = obj_tile_number;
     _OAM_SCAN_buffer[_OAM_SCAN_fetched * 4 + 3] = obj_sprite_flag;
 
@@ -139,7 +137,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
   uint8_t upper_tile;
   uint8_t lower_tile;
   uint8_t color_id_to_use;
-  uint8_t using_window = 0;
+  uint8_t using_window;
+  uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
+  uint8_t mask;
   uint32_t color_to_use;
 
   _DRAWING_to_wait--;
@@ -151,9 +151,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // For each pixel in the line
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
-    using_window =  (LCDC & PPU_LCDC_W_DISP_EN_MASK) and
-                    (_DRAWING_window_condition) and
-                    (x >= WX - 7) ? 1 : 0;
+    using_window =  ((LCDC & PPU_LCDC_W_DISP_EN_MASK) and
+                     (_DRAWING_window_condition) and
+                     (x >= WX - 7)) ? 1 : 0;
 
     // Bakground:
     // Horizontal tile index is (SCX + x) / 8,
@@ -201,17 +201,71 @@ void PPU::DRAWING_step(Bus_obj* bus){
 
     // Extract color to use
     color_id_to_use = 0;
-    if(lower_tile & (1 << (7 - (x % 8)))) color_id_to_use |= 0x02;
-    if(upper_tile & (1 << (7 - (x % 8)))) color_id_to_use |= 0x01;
-    color_to_use = get_color_bg_win(color_id_to_use);
+    mask = 1 << (7 - (x % 8));
+    if(lower_tile & mask) color_id_to_use |= 0x01;
+    if(upper_tile & mask) color_id_to_use |= 0x02;
+    color_to_use = get_color_from_palette(color_id_to_use, BGP);
 
     // If background and window are disabled, white is displayed
     if(!(LCDC & PPU_LCDC_BW_ENABLE_MASK)) color_to_use = PPU_PALETTE_WHITE;
 
     _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
+    background_colors[x + LY * SCREEN_WIDTH]       = color_id_to_use;
   }
 
   // Objects drawing
+  for(int x = 0; x < SCREEN_WIDTH; x++){
+
+    if(!(LCDC & PPU_LCDC_SPRITE_ENABLE_MASK)) break;
+
+    uint8_t obj_height = get_sprite_height();
+    uint8_t last_x_coordinate = 0xff;
+
+    // Consider all the objects
+    for(int k = 0; k < 4 * _OAM_SCAN_fetched; k += 4){
+
+      uint8_t obj_y_pos       = _OAM_SCAN_buffer[k    ];
+      uint8_t obj_x_pos       = _OAM_SCAN_buffer[k + 1];
+      uint8_t obj_tile_number = _OAM_SCAN_buffer[k + 2];
+      uint8_t obj_flags       = _OAM_SCAN_buffer[k + 3];
+      uint8_t palette_to_use;
+
+      // Object is not in the current pixel
+      if(obj_x_pos > (x + 8) or (obj_x_pos + 8) <= x + 8) continue;
+      if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
+      if(last_x_coordinate <= obj_x_pos) continue;
+      last_x_coordinate = obj_x_pos;
+
+      tile_address = PPU_TILES_MAP_1;
+
+      if(     obj_height == 8 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address +=  obj_tile_number           * 16 + 2 * (      (obj_y_pos + LY) % 8);
+      else if(obj_height == 8 and (obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address +=  obj_tile_number           * 16 + 2 * ( 7 - ((obj_y_pos + LY) % 8));
+      else if(obj_height == 16 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * (      (obj_y_pos + LY) % 16);
+      else
+        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ( 15 - ((obj_y_pos + LY) % 16));
+
+      lower_tile = bus->read(tile_address);
+      upper_tile = bus->read(tile_address + 1);
+
+      // Extract color to use
+      mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x % 8)  : 1 << (7 - (x % 8)) ;
+
+      color_id_to_use = 0;
+      if(lower_tile & mask) color_id_to_use |= 0x01;
+      if(upper_tile & mask) color_id_to_use |= 0x02;
+
+      palette_to_use = (obj_flags & PPU_SPRITE_PALETTE_NUMBER_MASK) ? OBP1 : OBP0;
+      color_to_use = get_color_from_palette(color_id_to_use, palette_to_use);
+
+      if(color_id_to_use != 0)
+        _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
+
+    }
+  }
+
   _state = State::STATE_MODE_0;
   _HBLANK_padding_to_wait = 284;
 }
@@ -341,12 +395,12 @@ void PPU::STAT_handler(Bus_obj* bus){
 
 }
 
-uint32_t PPU::get_color_bg_win(uint8_t tile){
+uint32_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
 
-  uint8_t index = (tile == 0) ? (BGP & 0b00000011)      :
-                  (tile == 1) ? (BGP & 0b00001100) >> 2 :
-                  (tile == 2) ? (BGP & 0b00110000) >> 4 :
-                                (BGP & 0b11000000) >> 6 ;
+  uint8_t index = (tile == 0) ? (palette & 0b00000011)      :
+                  (tile == 1) ? (palette & 0b00001100) >> 2 :
+                  (tile == 2) ? (palette & 0b00110000) >> 4 :
+                                (palette & 0b11000000) >> 6 ;
 
   return  (index == 0) ? PPU_PALETTE_WHITE      :
           (index == 1) ? PPU_PALETTE_LIGHT_GREY :
