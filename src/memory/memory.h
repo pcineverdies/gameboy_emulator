@@ -10,9 +10,10 @@
 
 class Memory : public Bus_obj  {
   std::vector<uint8_t> memory;
+  uint8_t ROM;
 
 public:
-            Memory(std::string, uint16_t, uint16_t);
+            Memory(std::string, uint16_t, uint16_t, uint8_t = 0);
   uint8_t   read(uint16_t);
   void      write(uint16_t, uint8_t);
   void      step(Bus_obj*){}

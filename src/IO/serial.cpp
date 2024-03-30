@@ -42,7 +42,7 @@ void Serial::write(uint16_t addr, uint8_t data){
 
     // Print on the screen the data which will be sent
     // Debug purposes TODO remove this functionality
-    if(data & 0x80) printf("%c", SB);
+    // if(data & 0x80) printf("%c", SB);
   }
   else{
     std::invalid_argument("Invalid address while accessing serial");

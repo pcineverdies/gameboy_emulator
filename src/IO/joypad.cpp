@@ -46,7 +46,7 @@ void Joypad::write(uint16_t addr, uint8_t data){
 
 */
 Joypad::Joypad(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 1){
-  JOYP = 0;
+  JOYP = 0xcf;
 }
 
 /** Joypad::step

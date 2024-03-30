@@ -25,7 +25,7 @@ void Memory::write(uint16_t addr, uint8_t data){
   if(addr >= size_addr)
     throw std::invalid_argument( "Address of provided to " + name + " over the limit\n" );
 
-  this->memory[addr] = data;
+  if(!ROM) this->memory[addr] = data;
 }
 
 /** Memory::Memory
@@ -34,12 +34,14 @@ void Memory::write(uint16_t addr, uint8_t data){
     @param name std::string Name of the object to create
     @param init_addr uint16_t Initial address of the object once connected to the bus
     @param size uint16_t Size of the addressable space of the object
+    @param ROM uint8_t Set the memorya as read-only
 
 */
-Memory::Memory(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
+Memory::Memory(std::string name, uint16_t init_addr, uint16_t size, uint8_t ROM) : Bus_obj(name, init_addr, size){
   this->set_frequency(0);
   this->memory.resize(this->size_addr);
   for(int i = 0; i < this->size_addr; i++) this->memory[i] = 0;
+  this->ROM = ROM;
 }
 
 /** Memory::init_from_file

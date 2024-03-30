@@ -1,30 +1,27 @@
 #include "../bus/bus.h"
 #include "../cpu/cpu.h"
-#include "../cpu/registers.h"
 #include "../memory/memory.h"
-#include "../memory/memory_map.h"
 #include "../memory/register.h"
 #include "../IO/timer.h"
 #include "../IO/serial.h"
 #include "../IO/joypad.h"
 #include "../PPU/PPU.h"
-#include <cassert>
-#include <vector>
-#include <cstdint>
 
-#define BUS_FREQUENCY 8192
-#define CPU_FREQUENCY BUS_FREQUENCY/4
-#define SERIAL_FREQUENCY 64
+#define BUS_FREQUENCY     4194304
+#define CPU_FREQUENCY     BUS_FREQUENCY/4
+#define SERIAL_FREQUENCY  1
+#define JOYPAD_FREQUENCY  256
+#define IS_ROM 1
 
 int main(int argc, char* argv[]) {
 
   if(argc != 2){
-    throw std::invalid_argument("./gameboy /path/to/ROM");
+    throw std::invalid_argument("./gameboy ./path/to/ROM");
   }
 
   Bus bus("Bus", 0, 0xffff, BUS_FREQUENCY);
 
-  Memory    rom_00(  "ROM_00",  0,      0x8000);
+  Memory    rom_00(  "ROM_00",  0,      0x8000, IS_ROM);
   Memory    vram(    "VRAM",    0x8000, 0x2000);
   Memory    ext_ram( "EXT_RAM", 0xA000, 0x2000);
   Memory    wram(    "WRAM",    0xC000, 0x2000);
@@ -66,7 +63,7 @@ int main(int argc, char* argv[]) {
   timer.set_frequency(BUS_FREQUENCY);
   serial.set_frequency(BUS_FREQUENCY);
   ppu.set_frequency(BUS_FREQUENCY);
-  joypad.set_frequency(2);
+  joypad.set_frequency(JOYPAD_FREQUENCY);
 
   while(1)
     bus.step(&bus);
