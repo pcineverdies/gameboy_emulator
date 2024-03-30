@@ -19,20 +19,20 @@ Bus_obj::Bus_obj(std::string name, uint16_t init_addr, uint16_t size_addr){
 /** Bus_obj::set_frequency
     Set the working frequency of the object. 0 for asynchrounous objects.
 
-    @param frequency uint16_t Frequency to use
+    @param frequency uint32_t Frequency to use
 
 */
-void Bus_obj::set_frequency(uint16_t frequency){
+void Bus_obj::set_frequency(uint32_t frequency){
   this->frequency = frequency;
 }
 
 /** Bus_obj::get_frequency
     Return the working frequency of the object
 
-    @return uint16_t frequency
+    @return uint32_t frequency
 
 */
-uint16_t Bus_obj::get_frequency(){
+uint32_t Bus_obj::get_frequency(){
   return this->frequency;
 }
 

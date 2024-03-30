@@ -24,7 +24,7 @@ class Bus : public Bus_obj{
 
 public:
 
-  Bus(std::string, uint16_t, uint16_t, uint16_t);
+  Bus(std::string, uint16_t, uint16_t, uint32_t);
 
   // Perform a read operation
   uint8_t read(uint16_t);

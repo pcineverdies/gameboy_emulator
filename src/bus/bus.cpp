@@ -11,10 +11,10 @@
     @param name std::string Name of the object to create
     @param init_addr uint16_t Initial address of the object once connected to the bus
     @param size uint16_t Size of the addressable space of the object
-    @param frequency uint16_t Working frequency of the clock connected to the bus
+    @param frequency uint32_t Working frequency of the clock connected to the bus
 
 */
-Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint16_t frequency) :
+Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint32_t frequency) :
   Bus_obj(name, init_addr, size){
   this->set_frequency(frequency);
 }
@@ -125,7 +125,6 @@ void Bus::write(uint16_t addr, uint8_t data){
 
 */
 void Bus::step(Bus_obj* bus){
-
 
 
   for(auto& bus_obj : bus_objects){
