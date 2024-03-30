@@ -66,7 +66,7 @@ class Cpu : public Bus_obj{
   uint8_t get_xx(uint8_t);
   uint8_t get_yyy(uint8_t);
   uint8_t get_zzz(uint8_t);
-  bool    check_mask(uint8_t, std::string);
+  bool    check_mask(uint8_t, const char*);
   void    print_status(Bus_obj*);
 
   uint8_t read_IE(Bus_obj*);

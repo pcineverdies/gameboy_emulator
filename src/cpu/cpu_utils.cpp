@@ -44,12 +44,11 @@ uint8_t Cpu::get_zzz(uint8_t opcode){
     translate in hardware given a fixed mask.
 
     @param data uint8_t data to check the mask with
-    @param mask std::string mask made of `0`, `1` and `x`.
+    @param mask const char* mask made of `0`, `1` and `x`.
     @return bool correctness of the mask
 
 */
-bool Cpu::check_mask(uint8_t data, std::string mask){
-  if(mask.length() != 8) throw std::invalid_argument("Mask size is not 8");
+bool Cpu::check_mask(uint8_t data, const char* mask){
 
   for(int i = 0; i < 8; i++){
     if(mask[7-i] == '0' and (data & (1 << i)) != 0) return false;
