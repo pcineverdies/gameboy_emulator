@@ -47,6 +47,9 @@ class PPU : public Bus_obj {
 
   uint8_t  _DRAWING_to_wait;
   uint32_t _DRAWING_display[SCREEN_WIDTH * SCREEN_HEIGHT];
+  uint8_t  _DRAWING_window_condition;
+  uint8_t  _DRAWING_window_line_counter;
+  uint32_t _DRAWING_display_matrix[SCREEN_HEIGHT * SCREEN_WIDTH];
 
   uint16_t _HBLANK_padding_to_wait;
   uint16_t _VBLANK_padding_to_wait;

@@ -26,4 +26,10 @@
 #define PPU_WX   0xff4a
 #define PPU_WY   0xff4b
 
+#define PPU_TILES_MAP_1 0x8000
+#define PPU_TILES_MAP_0 0x9000
+
+#define PPU_BG_MAP_1 0x9C00
+#define PPU_BG_MAP_0 0x9800
+
 #endif // !__MEMORY_MAP

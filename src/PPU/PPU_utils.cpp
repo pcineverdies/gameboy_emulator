@@ -27,6 +27,8 @@ void PPU::reset(){
   _OAM_SCAN_fetched = 0;
   _OAM_SCAN_addr = 0;
 
+  _DRAWING_window_condition = 0;
+
   for(int i = 0; i < OAM_BUFFER_SIZE_BYTE; i++) _OAM_SCAN_buffer[i] = 0;
 
   _state = State::STATE_MODE_2;
@@ -117,6 +119,9 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
     _OAM_SCAN_to_wait = 0;
     _OAM_SCAN_addr = 0;
 
+    if(_DRAWING_window_condition) _DRAWING_window_line_counter++;
+    if(LY == WY) _DRAWING_window_condition = 1;
+
     _DRAWING_to_wait = 172;
 
     _state = State::STATE_MODE_3;
@@ -125,54 +130,88 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
 
 void PPU::DRAWING_step(Bus_obj* bus){
 
-  uint16_t background_map_address = (LCDC & PPU_LCDC_B_TILE_MAP_MASK) ? 0x9C00 : 0x9800;
-  uint16_t window_map_address     = (LCDC & PPU_LCDC_W_TILE_MAP_MASK) ? 0x9C00 : 0x9800;
+  uint16_t background_map_address = (LCDC & PPU_LCDC_B_TILE_MAP_MASK) ? PPU_BG_MAP_1 : PPU_BG_MAP_0 ;
+  uint16_t window_map_address     = (LCDC & PPU_LCDC_W_TILE_MAP_MASK) ? PPU_BG_MAP_1 : PPU_BG_MAP_0 ;
   uint16_t tile_index_x;
   uint16_t tile_index_y;
   uint16_t tile_number;
   uint16_t tile_address;
   uint8_t upper_tile;
   uint8_t lower_tile;
-  uint8_t color_to_use;
+  uint8_t color_id_to_use;
+  uint8_t using_window = 0;
+  uint32_t color_to_use;
 
   _DRAWING_to_wait--;
 
   if(_DRAWING_to_wait != 0) return;
 
+  // Background and window drawing
+
   // For each pixel in the line
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
+    using_window =  (LCDC & PPU_LCDC_W_DISP_EN_MASK) and
+                    (_DRAWING_window_condition) and
+                    (x >= WX - 7) ? 1 : 0;
+
+    // Bakground:
     // Horizontal tile index is (SCX + x) / 8,
     // anded with 0x1f to allow horizontal scrolling
-    tile_index_x = ((SCX + x) / 8) & 0x1f;
+    //
+    // Window:
+    // Horizontal tile index is x - WX / 8
+    tile_index_x =  (using_window) ?
+                    ((x - WX) / 8) :
+                    ((SCX + x) / 8) & 0x1f ;
 
+    // Background:
     // Vertical tile index is (LY + y) / 8,
     // anded with 0xff to allow vertical scrolling
-    tile_index_y = ((LY + SCY) & 0xff) / 8;
+    //
+    // Window:
+    // Vertical tile index is _DRAWING_window_line_counter / 8
+    tile_index_y =  (using_window) ?
+                    (_DRAWING_window_line_counter / 8) :
+                    ((LY + SCY) & 0xff) / 8;
 
     // The offset of the tile index can be obtained by x + y * 32
-    tile_number = bus->read(background_map_address + tile_index_y * 32 + tile_index_x);
+    tile_number = bus->read(tile_index_y * 32 +
+                            tile_index_x +
+                            ((using_window) ? window_map_address : background_map_address));
 
     // Tile address is computed in different ways depending on LCDC
-    if(LCDC & PPU_LCDC_T_DATA_SEL_MASK) tile_address = 0x8000 +              tile_number * 16;
-    else                                tile_address = 0x9000 + (signed char)tile_number * 16;
+    tile_address =  ((LCDC & PPU_LCDC_T_DATA_SEL_MASK)) ? PPU_TILES_MAP_1 +              tile_number * 16 :
+                                                          PPU_TILES_MAP_0 + (signed char)tile_number * 16 ;
 
-    // Each tile is made of 16 bytes, 2 per row, for a total of 8 rows. We need to pick the row
-    // (LY + SCY) % 8
-    tile_address += (2 * ((LY + SCY) % 8));
+    // Each tile is made of 16 bytes, 2 per row, for a total of 8 rows.
+    //
+    // Background:
+    // We need to pick the row (LY + SCY) % 8
+    //
+    // Window:
+    // We need to pick the row (_DRAWING_window_line_counter) % 8
+    tile_address += (using_window) ?
+                    (_DRAWING_window_line_counter) % 8 :
+                    (2 * ((LY + SCY) % 8));
 
     // Get the two tiles
     lower_tile = bus->read(tile_address);
     upper_tile = bus->read(tile_address + 1);
 
-    color_to_use = 0;
-    if(lower_tile & (1 << (7 - (x % 8)))) color_to_use |= 0x02;
-    if(upper_tile & (1 << (7 - (x % 8)))) color_to_use |= 0x01;
+    // Extract color to use
+    color_id_to_use = 0;
+    if(lower_tile & (1 << (7 - (x % 8)))) color_id_to_use |= 0x02;
+    if(upper_tile & (1 << (7 - (x % 8)))) color_id_to_use |= 0x01;
+    color_to_use = get_color_bg_win(color_id_to_use);
 
-    display->update(x, LY, get_color_bg_win(color_to_use));
+    // If background and window are disabled, white is displayed
+    if(!(LCDC & PPU_LCDC_BW_ENABLE_MASK)) color_to_use = PPU_PALETTE_WHITE;
 
+    _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
   }
 
+  // Objects drawing
   _state = State::STATE_MODE_0;
   _HBLANK_padding_to_wait = 284;
 }
@@ -193,6 +232,8 @@ void PPU::HBLANK_step(Bus_obj* bus){
   if(LY == SCREEN_HEIGHT){
     set_vblank_interrupt(bus);
     _state = State::STATE_MODE_1;
+    _DRAWING_window_condition = 0;
+    _DRAWING_window_line_counter = 0;
     _VBLANK_padding_to_wait = VBLANK_LINE_WAIT;
   }
   // Enter OAM
@@ -227,6 +268,9 @@ void PPU::VBLANK_step(Bus_obj*){
 
   // If 10 pseudo-scanlines have been handled, move to new frame
   if(LY == SCREEN_HEIGHT + VBLANK_PSEUDO_LINES){
+
+    // Update the screen with the current frame
+    display->update(_DRAWING_display_matrix);
 
     // FPS counting
     counter++;

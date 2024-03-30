@@ -32,6 +32,8 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
     std::runtime_error("SDL_CreateWindowAndRenderer failed");
   }
 
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+
   // Set init color
   SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0);
 
@@ -43,38 +45,29 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
 }
 
 /** Display::update
-    Given a point of the screen, update it with the provided color
+    Given the content of the screen, updates the display
 
-    @param x uint8_t x coordinate of the point to update
-    @param y uint8_t y coordinate of the point to update
-    @param color uint32_t color to use to update
+    @param data uint32_t* array containig the data to update the screen
 */
-void Display::update(uint8_t x, uint8_t y, uint32_t color){
+void Display::update(uint32_t* data){
 
-  if(x >= width or y>=height){
-    std::invalid_argument("Provided coordinate to the display are not correct");
-  }
+  uint8_t* pixels;
+  int pitch = 0;
 
-  SDL_SetRenderDrawBlendMode(this->renderer, SDL_BLENDMODE_BLEND);
-  SDL_SetRenderDrawColor(this->renderer,
-                         (color >> 24) & 0xff,
-                         (color >> 16) & 0xff,
-                         (color >> 8) & 0xff,
-                         color & 0xff);
+  // Clear renderer
+  SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+  SDL_RenderClear(renderer);
 
-  for(int i = 0; i < scale_factor; i++){
-    for(int j = 0; j < scale_factor; j++){
-      SDL_RenderDrawPoint(this->renderer,
-                          i + x * scale_factor,
-                          j + y * scale_factor);
-    }
-  }
+  // Lock texture
+  SDL_LockTexture(texture, nullptr, (void**)&pixels, &pitch);
 
-  // Render modifications
-  if(x == width - 1 and y == height - 1)
-  SDL_RenderPresent(this->renderer);
+  // Copy data from the input array to the texture
+  memcpy(pixels, (void*)data, SCREEN_HEIGHT * SCREEN_WIDTH * 4);
 
-  last_cleared = false;
+  // Unlock, copy and render
+  SDL_UnlockTexture(texture);
+  SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+  SDL_RenderPresent(renderer);
 }
 
 /** Display::clear

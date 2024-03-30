@@ -7,9 +7,9 @@
 #include "PPU_def.h"
 
 class Display {
-  SDL_Event event;
   SDL_Renderer *renderer;
   SDL_Window *window;
+  SDL_Texture *texture;
 
   uint8_t width;
   uint8_t height;
@@ -21,7 +21,7 @@ class Display {
 
 public:
         Display(uint8_t, uint8_t, uint8_t);
-  void  update(uint8_t, uint8_t, uint32_t);
+  void  update(uint32_t*);
   void  clear(uint32_t);
         ~Display();
 };
