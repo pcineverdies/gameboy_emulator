@@ -36,14 +36,17 @@
 class Joypad : public Bus_obj {
 
   uint8_t JOYP;
+
+  void    set_interrupt(Bus_obj*);
+  bool    key_is_pressed(uint8_t);
+  bool    update_JOYP();
+
 public:
 
   Joypad(std::string, uint16_t);
   uint8_t read(uint16_t);
   void    write(uint16_t, uint8_t);
   void    step(Bus_obj*);
-  void    set_interrupt(Bus_obj*);
-  bool    key_is_pressed(uint8_t);
 
 };
 

@@ -13,6 +13,7 @@ uint8_t Joypad::read(uint16_t addr){
   if(addr != 0)
     std::invalid_argument("Invalid address while acessing joypad");
 
+  update_JOYP();
   return JOYP;
 }
 
@@ -50,55 +51,14 @@ Joypad::Joypad(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 
 }
 
 /** Joypad::step
-    Perform the step of the joypad at each T-cycle,
-    checking the status of the buttons and possibly raising an interrupt if
-    the corresponding button is pressed. Also, if the button 'q' is pressed,
-    the emulator exits
+    Perform the step of the joypad, modifying JOYP and possibly raising
+    an interrupt.
 
     @param bus Bus_obj* pointer to a bus to use for reading
 
 */
 void Joypad::step(Bus_obj* bus){
-
-  uint8_t activate_interrupt = 0;
-
-  if(key_is_pressed(JOYPAD_QUIT_BUTTON)){
-    exit(1);
-  }
-
-  if(JOYP & (JOYPAD_SB_MASK)){
-    if(key_is_pressed(JOYPAD_START_BUTTON)) JOYP &= (~JOYPAD_START_MASK), activate_interrupt = 1;
-    else                                    JOYP |= ( JOYPAD_START_MASK);
-
-    if(key_is_pressed(JOYPAD_SELECT_BUTTON))  JOYP &= (~JOYPAD_SELECT_MASK), activate_interrupt = 1;
-    else                                      JOYP |= ( JOYPAD_SELECT_MASK);
-
-    if(key_is_pressed(JOYPAD_B_BUTTON)) JOYP &= (~JOYPAD_B_MASK), activate_interrupt = 1;
-    else                                JOYP |= ( JOYPAD_B_MASK);
-
-    if(key_is_pressed(JOYPAD_A_BUTTON)) JOYP &= (~JOYPAD_A_MASK), activate_interrupt = 1;
-    else                                JOYP |= ( JOYPAD_A_MASK);
-  }
-
-  else if(JOYP & (JOYPAD_DP_MASK)){
-    if(key_is_pressed(JOYPAD_UP_BUTTON))  JOYP &= (~JOYPAD_UP_MASK), activate_interrupt = 1;
-    else                                  JOYP |= ( JOYPAD_UP_MASK);
-
-    if(key_is_pressed(JOYPAD_DOWN_BUTTON))  JOYP &= (~JOYPAD_DOWN_MASK), activate_interrupt = 1;
-    else                                    JOYP |= ( JOYPAD_DOWN_MASK);
-
-    if(key_is_pressed(JOYPAD_LEFT_BUTTON)) JOYP &= (~JOYPAD_LEFT_MASK), activate_interrupt = 1;
-    else                                   JOYP |= ( JOYPAD_LEFT_MASK);
-
-    if(key_is_pressed(JOYPAD_RIGHT_BUTTON)) JOYP &= (~JOYPAD_RIGHT_MASK), activate_interrupt = 1;
-    else                                    JOYP |= ( JOYPAD_RIGHT_MASK);
-  }
-
-  else{
-    JOYP |= 0x0f;
-  }
-
-  if(activate_interrupt) set_interrupt(bus);
+  if(this->update_JOYP()) set_interrupt(bus);
 }
 
 /** Joypad::set_interrupt
@@ -134,4 +94,49 @@ bool Joypad::key_is_pressed(uint8_t ks) {
 
   return state[ks];
 
+}
+
+/** Joypad::update_JOYP
+    Modify the content of JOYP depending on the current pressed keys.
+
+    @return bool true if a key is pressed, so an interrupt is to be set
+
+*/
+bool Joypad::update_JOYP(){
+
+  uint8_t activate_interrupt = 0;
+
+  if(key_is_pressed(JOYPAD_QUIT_BUTTON)){
+    exit(1);
+  }
+
+  if(!(JOYP & JOYPAD_SB_MASK)){
+    if(key_is_pressed(JOYPAD_START_BUTTON)) JOYP &= (~JOYPAD_START_MASK), activate_interrupt = 1;
+    else                                    JOYP |= ( JOYPAD_START_MASK);
+
+    if(key_is_pressed(JOYPAD_SELECT_BUTTON))  JOYP &= (~JOYPAD_SELECT_MASK), activate_interrupt = 1;
+    else                                      JOYP |= ( JOYPAD_SELECT_MASK);
+
+    if(key_is_pressed(JOYPAD_B_BUTTON)) JOYP &= (~JOYPAD_B_MASK), activate_interrupt = 1;
+    else                                JOYP |= ( JOYPAD_B_MASK);
+
+    if(key_is_pressed(JOYPAD_A_BUTTON)) JOYP &= (~JOYPAD_A_MASK), activate_interrupt = 1;
+    else                                JOYP |= ( JOYPAD_A_MASK);
+  }
+
+  if(!(JOYP & (JOYPAD_DP_MASK))){
+    if(key_is_pressed(JOYPAD_UP_BUTTON))  JOYP &= (~JOYPAD_UP_MASK), activate_interrupt = 1;
+    else                                  JOYP |= ( JOYPAD_UP_MASK);
+
+    if(key_is_pressed(JOYPAD_DOWN_BUTTON))  JOYP &= (~JOYPAD_DOWN_MASK), activate_interrupt = 1;
+    else                                    JOYP |= ( JOYPAD_DOWN_MASK);
+
+    if(key_is_pressed(JOYPAD_LEFT_BUTTON)) JOYP &= (~JOYPAD_LEFT_MASK), activate_interrupt = 1;
+    else                                   JOYP |= ( JOYPAD_LEFT_MASK);
+
+    if(key_is_pressed(JOYPAD_RIGHT_BUTTON)) JOYP &= (~JOYPAD_RIGHT_MASK), activate_interrupt = 1;
+    else                                    JOYP |= ( JOYPAD_RIGHT_MASK);
+  }
+
+  return activate_interrupt;
 }
