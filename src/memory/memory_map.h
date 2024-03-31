@@ -23,8 +23,8 @@
 #define PPU_BGP  0xff47
 #define PPU_OBP0 0xff48
 #define PPU_OBP1 0xff49
-#define PPU_WX   0xff4a
-#define PPU_WY   0xff4b
+#define PPU_WY   0xff4a
+#define PPU_WX   0xff4b
 
 #define PPU_TILES_MAP_1 0x8000
 #define PPU_TILES_MAP_0 0x9000

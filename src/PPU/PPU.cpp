@@ -68,6 +68,13 @@ void PPU::step(Bus_obj* bus){
 
   if(!is_PPU_on()){
     display->clear(0xffffffff);
+
+    // Reset status of PPU when LCD is off. In the correct PPU
+    // timing, the first frame after boot should be discarded
+    LY = 0;
+    _state = State::STATE_MODE_0;
+    STAT &= 0b11111100;
+
     // reset();
     return;
   }

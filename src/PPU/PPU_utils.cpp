@@ -117,7 +117,6 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
     _OAM_SCAN_to_wait = 0;
     _OAM_SCAN_addr = 0;
 
-    if(_DRAWING_window_condition) _DRAWING_window_line_counter++;
     if(LY == WY) _DRAWING_window_condition = 1;
 
     _DRAWING_to_wait = 172;
@@ -138,6 +137,7 @@ void PPU::DRAWING_step(Bus_obj* bus){
   uint8_t lower_tile;
   uint8_t color_id_to_use;
   uint8_t using_window;
+  uint8_t used_window = 0;
   uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
   uint8_t mask;
   uint32_t color_to_use;
@@ -155,6 +155,8 @@ void PPU::DRAWING_step(Bus_obj* bus){
                      (_DRAWING_window_condition) and
                      (x >= WX - 7)) ? 1 : 0;
 
+    if(using_window) used_window = 1;
+
     // Bakground:
     // Horizontal tile index is (SCX + x) / 8,
     // anded with 0x1f to allow horizontal scrolling
@@ -162,7 +164,7 @@ void PPU::DRAWING_step(Bus_obj* bus){
     // Window:
     // Horizontal tile index is x - WX / 8
     tile_index_x =  (using_window) ?
-                    ((x - WX) / 8) :
+                    ((x - WX + 7) / 8) :
                     ((SCX + x) / 8) & 0x1f ;
 
     // Background:
@@ -192,8 +194,8 @@ void PPU::DRAWING_step(Bus_obj* bus){
     // Window:
     // We need to pick the row (_DRAWING_window_line_counter) % 8
     tile_address += (using_window) ?
-                    (_DRAWING_window_line_counter) % 8 :
-                    (2 * ((LY + SCY) % 8));
+                    2 * (_DRAWING_window_line_counter % 8) :
+                    2 * ((LY + SCY) % 8);
 
     // Get the two tiles
     lower_tile = bus->read(tile_address);
@@ -201,7 +203,7 @@ void PPU::DRAWING_step(Bus_obj* bus){
 
     // Extract color to use
     color_id_to_use = 0;
-    mask = 1 << (7 - (x % 8));
+    mask = (using_window) ? 1 << (7 - (x % 8)) : 1 << (7 - ((x + SCX) % 8));
     if(lower_tile & mask) color_id_to_use |= 0x01;
     if(upper_tile & mask) color_id_to_use |= 0x02;
     color_to_use = get_color_from_palette(color_id_to_use, BGP);
@@ -251,7 +253,7 @@ void PPU::DRAWING_step(Bus_obj* bus){
       upper_tile = bus->read(tile_address + 1);
 
       // Extract color to use
-      mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x % 8)  : 1 << (7 - (x % 8)) ;
+      mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x - obj_x_pos + 8)  : 1 << (7 - (x - obj_x_pos + 8));
 
       color_id_to_use = 0;
       if(lower_tile & mask) color_id_to_use |= 0x01;
@@ -266,6 +268,7 @@ void PPU::DRAWING_step(Bus_obj* bus){
     }
   }
 
+  if(used_window) _DRAWING_window_line_counter++;
   _state = State::STATE_MODE_0;
   _HBLANK_padding_to_wait = 284;
 }
