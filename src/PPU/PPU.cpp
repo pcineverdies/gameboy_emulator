@@ -2,12 +2,25 @@
 #include <cstdint>
 #include <stdexcept>
 
+/** PPU::PPU
+    PPU constructor
+
+    @param name std::string Name of the object to create
+    @param init_addr uint16_t Initial address of the object once connected to the bus
+
+*/
 PPU::PPU(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 12){
   this->display = new Display(SCREEN_WIDTH, SCREEN_HEIGHT, SCALE_FACTOR);
   reset();
 }
 
+/** PPU::read
+    Read by from PPU at a given address
 
+    @param addr uint16_t address to read
+    @return uint8_t read byte
+
+*/
 uint8_t PPU::read(uint16_t addr){
   uint8_t res = 0;
   if     (addr == (PPU_LCDC - PPU_BASE)) res = LCDC;
@@ -27,6 +40,13 @@ uint8_t PPU::read(uint16_t addr){
   return res;
 }
 
+/** write::write
+    Write a byte in PPU at a given address
+
+    @param addr uint16_t address to use
+    @param data uint8_t  byte to write
+
+*/
 void PPU::write(uint16_t addr, uint8_t data){
 
   if     (addr == (PPU_LCDC - PPU_BASE)) LCDC = data;

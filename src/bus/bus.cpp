@@ -76,6 +76,9 @@ void Bus::add_to_bus(Bus_obj* new_object){
 
 */
 uint8_t Bus::read(uint16_t addr){
+
+  uint8_t res = 0;
+
   for(auto& bus_obj : bus_objects){
 
     // Cannot read on non-addressable objects
@@ -85,11 +88,14 @@ uint8_t Bus::read(uint16_t addr){
     uint16_t init_addr = bus_obj->get_init_addr();
 
     if(addr >= init_addr && addr < init_addr + size)
-      return bus_obj->read(addr - init_addr);
+      res = bus_obj->read(addr - init_addr);
   }
 
-  // printf("Attempt to read from invalid location: %04x\n", addr);
-  return 0;
+  #ifdef __DEBUG
+    printf("Attempt to read an invalid location: %04x\n", addr);
+  #endif
+
+  return res;
 }
 
 /** Bus::write
@@ -116,7 +122,10 @@ void Bus::write(uint16_t addr, uint8_t data){
     }
   }
 
-  // printf("Attempt to write in invalid location: %04x\n", addr);
+  #ifdef __DEBUG
+    printf("Attempt to read at invalid location: %04x\n", addr);
+  #endif
+
 }
 
 /** Bus::step
@@ -126,6 +135,8 @@ void Bus::write(uint16_t addr, uint8_t data){
 */
 void Bus::step(Bus_obj* bus){
 
+
+  auto start =  std::chrono::system_clock::now();
 
   for(auto& bus_obj : bus_objects){
 
@@ -137,6 +148,8 @@ void Bus::step(Bus_obj* bus){
     }
 
   }
+
+  while((std::chrono::system_clock::now() - start).count() < 166);
 
   current_cc++;
 

@@ -5,6 +5,11 @@
 #include <iostream>
 #include <chrono>
 
+
+/** PPU::reset
+    Sets the initial values of the PPU registers
+
+*/
 void PPU::reset(){
 
   LCDC  = 0x91;
@@ -36,6 +41,13 @@ void PPU::reset(){
 
 }
 
+/** PPU::DMA_OAM_step
+    Performs a step of the DMA operation. Each transfer
+    requires 1 M-cycle (== 4 T-cycles).
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::DMA_OAM_step(Bus_obj* bus){
 
   uint16_t src_addr;
@@ -70,6 +82,13 @@ void PPU::DMA_OAM_step(Bus_obj* bus){
 
 }
 
+/** PPU::OAM_SCAN_step
+    Perform a step of OAM scan (PPU mode 2), reading at most
+    10 objects which have to be displayed on the current line
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::OAM_SCAN_step(Bus_obj* bus){
 
   uint16_t current_address;
@@ -114,33 +133,66 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
   // If address is 160, then the whole OAM memory was covered, and we can move
   // to the next phase
   if(_OAM_SCAN_addr == OAM_SIZE){
+
+    // Reset OAM variables
     _OAM_SCAN_to_wait = 0;
     _OAM_SCAN_addr = 0;
 
+    // If LY == WY at least once in the frame, then the window
+    // can be drawn
     if(LY == WY) _DRAWING_window_condition = 1;
 
-    _DRAWING_to_wait = 172;
+    // Clock cycles to wait for the PPU in Mode 3
+    _DRAWING_to_wait = PPU_DRAWING_TO_WAIT;
 
     _state = State::STATE_MODE_3;
   }
 }
 
+/** PPU::DRAWING_step
+    Perform a step of DRAWING (PPU mode 3), displaying the content
+    of the current scanline
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::DRAWING_step(Bus_obj* bus){
 
+  // Select which maps to use for background and window
   uint16_t background_map_address = (LCDC & PPU_LCDC_B_TILE_MAP_MASK) ? PPU_BG_MAP_1 : PPU_BG_MAP_0 ;
   uint16_t window_map_address     = (LCDC & PPU_LCDC_W_TILE_MAP_MASK) ? PPU_BG_MAP_1 : PPU_BG_MAP_0 ;
+
+  // Indeces of the tiles to read
   uint16_t tile_index_x;
   uint16_t tile_index_y;
+
+  // Number of the tile combining tile_index_x and tile_index_y
   uint16_t tile_number;
+
+  // Address of the tile to use
   uint16_t tile_address;
+
+  // 16 bits of the proper line to use within the tile
   uint8_t upper_tile;
   uint8_t lower_tile;
+
+  // Id of the color which will be used
   uint8_t color_id_to_use;
+
+  // RRGGBBAA representation of the displayed color, computer through
+  // the color ID and the palette
+  uint32_t color_to_use;
+
+  // Stores which ids have been used for the background/window
+  uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
+
+  // Bit mask
+  uint8_t mask;
+
+  // If window is to be used on the current pixel, and if window was used
+  // at least once in the frame
   uint8_t using_window;
   uint8_t used_window = 0;
-  uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
-  uint8_t mask;
-  uint32_t color_to_use;
 
   _DRAWING_to_wait--;
 
@@ -151,28 +203,32 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // For each pixel in the line
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
+    // Is the window to be used? Window must be enabled,
+    // the condition LY == WY was encountered in the current frame
+    // and window should be currently visible
     using_window =  ((LCDC & PPU_LCDC_W_DISP_EN_MASK) and
                      (_DRAWING_window_condition) and
                      (x >= WX - 7)) ? 1 : 0;
 
+    // Store if window was used for this line
     if(using_window) used_window = 1;
 
-    // Bakground:
-    // Horizontal tile index is (SCX + x) / 8,
-    // anded with 0x1f to allow horizontal scrolling
-    //
     // Window:
-    // Horizontal tile index is x - WX / 8
+    // Horizontal tile index is (x - WX + 7) / 8
+    //
+    // Bakground:
+    // Horizontal tile index is (SCX + x) / 8
+    // anded with 0x1f to allow horizontal tile scrolling
     tile_index_x =  (using_window) ?
-                    ((x - WX + 7) / 8) :
+                     (x - WX + 7) / 8      :
                     ((SCX + x) / 8) & 0x1f ;
 
-    // Background:
-    // Vertical tile index is (LY + y) / 8,
-    // anded with 0xff to allow vertical scrolling
-    //
     // Window:
     // Vertical tile index is _DRAWING_window_line_counter / 8
+    //
+    // Background:
+    // Vertical tile index is (LY + y) / 8,
+    // anded with 0xff to allow vertical tile scrolling
     tile_index_y =  (using_window) ?
                     (_DRAWING_window_line_counter / 8) :
                     ((LY + SCY) & 0xff) / 8;
@@ -188,11 +244,11 @@ void PPU::DRAWING_step(Bus_obj* bus){
 
     // Each tile is made of 16 bytes, 2 per row, for a total of 8 rows.
     //
-    // Background:
-    // We need to pick the row (LY + SCY) % 8
-    //
     // Window:
     // We need to pick the row (_DRAWING_window_line_counter) % 8
+    //
+    // Background:
+    // We need to pick the row (LY + SCY) % 8
     tile_address += (using_window) ?
                     2 * (_DRAWING_window_line_counter % 8) :
                     2 * ((LY + SCY) % 8);
@@ -201,9 +257,13 @@ void PPU::DRAWING_step(Bus_obj* bus){
     lower_tile = bus->read(tile_address);
     upper_tile = bus->read(tile_address + 1);
 
+
+    // No pixel scrolling for window. Since pixels are displayed from left to
+    // right, we must consider elements from left to right as well.
+    mask = (using_window) ? 1 << (7 - (x % 8)) : 1 << (7 - ((x + SCX) % 8));
+
     // Extract color to use
     color_id_to_use = 0;
-    mask = (using_window) ? 1 << (7 - (x % 8)) : 1 << (7 - ((x + SCX) % 8));
     if(lower_tile & mask) color_id_to_use |= 0x01;
     if(upper_tile & mask) color_id_to_use |= 0x02;
     color_to_use = get_color_from_palette(color_id_to_use, BGP);
@@ -211,68 +271,104 @@ void PPU::DRAWING_step(Bus_obj* bus){
     // If background and window are disabled, white is displayed
     if(!(LCDC & PPU_LCDC_BW_ENABLE_MASK)) color_to_use = PPU_PALETTE_WHITE;
 
+    // Stores color to be displayed
     _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
+
+    // Stores id of the used color, in order to handle the priority of the sprites
     background_colors[x + LY * SCREEN_WIDTH]       = color_id_to_use;
   }
 
   // Objects drawing
   for(int x = 0; x < SCREEN_WIDTH; x++){
 
+    // Break if sprites are disabled
     if(!(LCDC & PPU_LCDC_SPRITE_ENABLE_MASK)) break;
 
+    // 16 or 8, depending on LCDC
     uint8_t obj_height = get_sprite_height();
+
+    // A sprite with lower x coordinate has priority over a
+    // sprite with higher x coordinate. By picking a sprite iff
+    // no other with lower x was used, we are sure to respect this rule
     uint8_t last_x_coordinate = 0xff;
 
     // Consider all the objects
     for(int k = 0; k < 4 * _OAM_SCAN_fetched; k += 4){
 
+      // Read data from OAM buffer
       uint8_t obj_y_pos       = _OAM_SCAN_buffer[k    ];
       uint8_t obj_x_pos       = _OAM_SCAN_buffer[k + 1];
       uint8_t obj_tile_number = _OAM_SCAN_buffer[k + 2];
       uint8_t obj_flags       = _OAM_SCAN_buffer[k + 3];
+
+      // which palette to be used
       uint8_t palette_to_use;
 
-      // Object is not in the current pixel
+      // object is not in the current pixel: skip object
       if(obj_x_pos > (x + 8) or (obj_x_pos + 8) <= x + 8) continue;
-      if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
-      if(last_x_coordinate <= obj_x_pos) continue;
-      last_x_coordinate = obj_x_pos;
 
+      // priority is 1 and id of the background was different from 0: skip object
+      if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
+
+      // an object with lower x coordinate was already drawn: skip object
+      if(last_x_coordinate <= obj_x_pos) continue;
+      else last_x_coordinate = obj_x_pos;
+
+      // Tile map is always fixed for sprites
       tile_address = PPU_TILES_MAP_1;
 
-      if(     obj_height == 8 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
-        tile_address +=  obj_tile_number           * 16 + 2 * (      (obj_y_pos + LY) % 8);
-      else if(obj_height == 8 and (obj_flags & PPU_SPRITE_Y_FLIP_MASK))
-        tile_address +=  obj_tile_number           * 16 + 2 * ( 7 - ((obj_y_pos + LY) % 8));
-      else if(obj_height == 16 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
-        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * (      (obj_y_pos + LY) % 16);
-      else
-        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ( 15 - ((obj_y_pos + LY) % 16));
+      // 8 bits sprite and no Y flip
+      if(obj_height == 8 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address += obj_tile_number * 16 + 2 * (LY - obj_y_pos + 16);
 
+      // 8 bits sprite and Y flip
+      else if(obj_height == 8 and (obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address += obj_tile_number * 16 + 2 * ( 7  - (LY - obj_y_pos + 16));
+
+      // 16 bits sprite and no Y flip: start from tile number with msb reset
+      else if(obj_height == 16 and !(obj_flags & PPU_SPRITE_Y_FLIP_MASK))
+        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ((LY - obj_y_pos + 16));
+
+      // 16 bits sprite and Y flip: start from tile number with msb reset
+      else
+        tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ( 15 - (LY - obj_y_pos + 16));
+
+      // Get tile
       lower_tile = bus->read(tile_address);
       upper_tile = bus->read(tile_address + 1);
 
-      // Extract color to use
+      // Handle X flip
       mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x - obj_x_pos + 8)  : 1 << (7 - (x - obj_x_pos + 8));
 
+      // Get color id to use
       color_id_to_use = 0;
       if(lower_tile & mask) color_id_to_use |= 0x01;
       if(upper_tile & mask) color_id_to_use |= 0x02;
 
+      // Extract color to use
       palette_to_use = (obj_flags & PPU_SPRITE_PALETTE_NUMBER_MASK) ? OBP1 : OBP0;
       color_to_use = get_color_from_palette(color_id_to_use, palette_to_use);
 
+      // Do not draw if color id is 0
       if(color_id_to_use != 0)
         _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
-
     }
   }
 
+  // Incremente the internal window counter if window was used in the current line
   if(used_window) _DRAWING_window_line_counter++;
+
+  // Move to HBLANK
   _state = State::STATE_MODE_0;
   _HBLANK_padding_to_wait = 284;
 }
 
+/** PPU::HBLANK_step
+    Perform a step of HBLANK (PPU mode 0), waiting for the next scanline
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::HBLANK_step(Bus_obj* bus){
 
   // Handle HBLANK as busy waiting until 456 per scanline have passed
@@ -305,12 +401,20 @@ void PPU::HBLANK_step(Bus_obj* bus){
 }
 
 
+/** PPU::VBLANK_step
+    Perform a step of VBLANK (PPU mode 0), waiting for the next frame
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::VBLANK_step(Bus_obj*){
 
+  #ifdef __DEBUG
   // FPS counter variables
   static int counter = 0;
   static auto start = std::chrono::system_clock::now();
   static auto end = std::chrono::system_clock::now();
+  #endif
 
   _VBLANK_padding_to_wait--;
 
@@ -329,6 +433,7 @@ void PPU::VBLANK_step(Bus_obj*){
     // Update the screen with the current frame
     display->update(_DRAWING_display_matrix);
 
+    #ifdef __DEBUG
     // FPS counting
     counter++;
     if(counter % 60 == 0){
@@ -337,19 +442,40 @@ void PPU::VBLANK_step(Bus_obj*){
       std::cout << "FPS\t" << 60*((float)(1000000000)/(elapsed.count())) << '\n';
       start =  std::chrono::system_clock::now();
     }
+    #endif
+
     _state = State::STATE_MODE_2;
     LY = 0;
   }
 }
 
+/** PPU::is_PPU_on
+    Use LCDC to check if PPU is on
+
+    @return bool true if PPU is on
+
+*/
 bool PPU::is_PPU_on(){
   return (LCDC & PPU_LCDC_EN_MASK) ? true : false;
 }
 
+/** PPU::get_sprite_height
+    Use LCDC to determine the height of the sprites
+
+    @return uint8_t 8 or 16, depending on LCDC
+
+*/
 uint8_t PPU::get_sprite_height(){
   return (LCDC & PPU_LCDC_SPRITE_SIZE_MASK) ? 16 : 8;
 }
 
+/** PPU::STAT_handler
+    At each PPU step, updates STAT and possibly raise an
+    interrupt
+
+    @param bus Bus_obj* pointer to a bus to use for reading and writing
+
+*/
 void PPU::STAT_handler(Bus_obj* bus){
 
   // If an interrupt had been fired but one condition is still active,
@@ -398,6 +524,14 @@ void PPU::STAT_handler(Bus_obj* bus){
 
 }
 
+/** PPU::get_color_from_palette
+    Given a tile and a palette, extract the RRGGBBAA format of the color
+    to be used on the screen
+
+    @param tile uint8_t tile to be used
+    @param palette uint8_t palette to be used
+
+*/
 uint32_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
 
   uint8_t index = (tile == 0) ? (palette & 0b00000011)      :

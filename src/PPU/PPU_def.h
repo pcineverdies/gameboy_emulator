@@ -40,4 +40,6 @@
 #define PPU_PALETTE_DARK_GREY 0x545454ff
 #define PPU_PALETTE_BLACK 0x000000ff
 
+#define PPU_DRAWING_TO_WAIT 172
+
 #endif // !__PPU_DEF_H

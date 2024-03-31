@@ -10,7 +10,7 @@
 #define BUS_FREQUENCY     4194304
 #define CPU_FREQUENCY     BUS_FREQUENCY/4
 #define SERIAL_FREQUENCY  1
-#define JOYPAD_FREQUENCY  256
+#define JOYPAD_FREQUENCY  1024
 #define IS_ROM 1
 
 int main(int argc, char* argv[]) {
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
   bus.add_to_bus(&cpu);
 
   timer.set_frequency(BUS_FREQUENCY);
-  serial.set_frequency(BUS_FREQUENCY);
+  serial.set_frequency(SERIAL_FREQUENCY);
   ppu.set_frequency(BUS_FREQUENCY);
   joypad.set_frequency(JOYPAD_FREQUENCY);
 
