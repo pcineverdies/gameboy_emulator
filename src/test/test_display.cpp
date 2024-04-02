@@ -5,6 +5,7 @@
 #include "../IO/timer.h"
 #include "../IO/serial.h"
 #include "../IO/joypad.h"
+#include "../memory/cartridge.h"
 #include "../PPU/PPU.h"
 
 #define BUS_FREQUENCY     4194304
@@ -21,9 +22,7 @@ int main(int argc, char* argv[]) {
 
   Bus bus("Bus", 0, 0xffff, BUS_FREQUENCY);
 
-  Memory    rom_00(  "ROM_00",  0,      0x8000, IS_ROM);
-  Memory    vram(    "VRAM",    0x8000, 0x2000);
-  Memory    ext_ram( "EXT_RAM", 0xA000, 0x2000);
+  Cartridge cart(    "CART",    0x0000, 0xC000);
   Memory    wram(    "WRAM",    0xC000, 0x2000);
   // Emtpy region between 0xE000 and 0xFDFF
   Memory    oam(     "OAM",     0xFE00, 0x00A0);
@@ -43,11 +42,9 @@ int main(int argc, char* argv[]) {
 
   Cpu cpu("cpu", CPU_FREQUENCY);
 
-  rom_00.init_from_file(0x00, argv[1]);
+  cart.init_from_file(argv[1]);
 
-  bus.add_to_bus(&rom_00);
-  bus.add_to_bus(&vram);
-  bus.add_to_bus(&ext_ram);
+  bus.add_to_bus(&cart);
   bus.add_to_bus(&wram);
   bus.add_to_bus(&oam);
   bus.add_to_bus(&joypad);
