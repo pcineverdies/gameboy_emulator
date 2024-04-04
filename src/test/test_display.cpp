@@ -44,23 +44,23 @@ int main(int argc, char* argv[]) {
 
   cart.init_from_file(argv[1]);
 
-  bus.add_to_bus(&cart);
-  bus.add_to_bus(&wram);
-  bus.add_to_bus(&oam);
-  bus.add_to_bus(&joypad);
-  bus.add_to_bus(&serial);
-  bus.add_to_bus(&timer);
-  bus.add_to_bus(&if_reg);
-  bus.add_to_bus(&ppu);
-  bus.add_to_bus(&brom_en);
-  bus.add_to_bus(&hram);
-  bus.add_to_bus(&ie_ref);
-  bus.add_to_bus(&cpu);
-
   timer.set_frequency(BUS_FREQUENCY);
   serial.set_frequency(SERIAL_FREQUENCY);
   ppu.set_frequency(BUS_FREQUENCY);
   joypad.set_frequency(JOYPAD_FREQUENCY);
+
+  bus.add_to_bus(&cart);
+  bus.add_to_bus(&wram);
+  bus.add_to_bus(&oam);
+  bus.add_to_bus(&ppu);
+  bus.add_to_bus(&timer);
+  bus.add_to_bus(&joypad);
+  bus.add_to_bus(&serial);
+  bus.add_to_bus(&if_reg);
+  bus.add_to_bus(&brom_en);
+  bus.add_to_bus(&hram);
+  bus.add_to_bus(&ie_ref);
+  bus.add_to_bus(&cpu);
 
   while(1)
     bus.step(&bus);

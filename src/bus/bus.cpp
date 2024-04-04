@@ -64,6 +64,9 @@ void Bus::add_to_bus(Bus_obj* new_object){
   ) throw std::invalid_argument("Objects connected to bus must have frequency divisible for the bus frequency");
 
   bus_objects.push_back(new_object);
+  frequency_cache.push_back(new_object->get_frequency());
+  init_addr_cache.push_back(new_object->get_init_addr());
+  size_cache.push_back(new_object->get_size());
 }
 
 
@@ -77,25 +80,26 @@ void Bus::add_to_bus(Bus_obj* new_object){
 */
 uint8_t Bus::read(uint16_t addr){
 
-  uint8_t res = 0;
+  uint16_t size;
+  uint16_t init_addr;
 
-  for(auto& bus_obj : bus_objects){
+  for(uint32_t i = 0; i < bus_objects.size(); i++){
+
+    size = size_cache[i];
+    init_addr = init_addr_cache[i];
 
     // Cannot read on non-addressable objects
-    if(bus_obj->get_size() == 0) continue;
-
-    uint16_t size = bus_obj->get_size();
-    uint16_t init_addr = bus_obj->get_init_addr();
+    if(size == 0) continue;
 
     if(addr >= init_addr && addr < init_addr + size)
-      res = bus_obj->read(addr - init_addr);
+      return bus_objects[i]->read(addr - init_addr);
   }
 
   #ifdef __DEBUG
     printf("Attempt to read an invalid location: %04x\n", addr);
   #endif
 
-  return res;
+  return 0xff;
 }
 
 /** Bus::write
@@ -108,16 +112,19 @@ uint8_t Bus::read(uint16_t addr){
 */
 void Bus::write(uint16_t addr, uint8_t data){
 
-  for(auto& bus_obj : bus_objects){
+  uint16_t size;
+  uint16_t init_addr;
+
+  for(uint32_t i = 0; i < bus_objects.size(); i++){
+
+    size = size_cache[i];
+    init_addr = init_addr_cache[i];
 
     // Cannot write on non-addressable objects
-    if(bus_obj->get_size() == 0) continue;
-
-    uint16_t size = bus_obj->get_size();
-    uint16_t init_addr = bus_obj->get_init_addr();
+    if(size == 0) continue;
 
     if(addr >= init_addr && addr < init_addr + size){
-      bus_obj->write(addr - init_addr, data);
+      bus_objects[i]->write(addr - init_addr, data);
       return;
     }
   }
@@ -135,22 +142,30 @@ void Bus::write(uint16_t addr, uint8_t data){
 */
 void Bus::step(Bus_obj* bus){
 
-
   auto start =  std::chrono::system_clock::now();
+  uint32_t bus_frequency = this->frequency;
+  uint32_t obj_frequency;
+  uint32_t bus_step_size = 4;
 
-  for(auto& bus_obj : bus_objects){
+  for(uint32_t i = 0; i < bus_objects.size(); i++){
+
+    obj_frequency = frequency_cache[i];
 
     // Cannot step asynchronous objects, such as memories
-    if(bus_obj->get_frequency() == 0) continue;
+    if(obj_frequency == 0) continue;
 
-    if(current_cc % (this->get_frequency() / bus_obj->get_frequency()) == 0){
-      bus_obj->step(bus);
+    // Try the next 4 T-cycles and possibly perform all the steps.
+    // This is a way to lose a bit of timing accuracy, while gaining
+    // performances in the emulator
+    for(uint32_t j = 0; j < bus_step_size; j++){
+      if((current_cc + j) % (bus_frequency / obj_frequency) == 0)
+        bus_objects[i]->step(bus);
     }
 
   }
 
-  while((std::chrono::system_clock::now() - start).count() < 166);
+  // while((std::chrono::system_clock::now() - start).count() < 166 * bus_step_size);
 
-  current_cc++;
+  current_cc += bus_step_size;
 
 }

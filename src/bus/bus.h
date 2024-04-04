@@ -19,6 +19,17 @@ class Bus : public Bus_obj{
    * */
   std::vector<Bus_obj*> bus_objects;
 
+  /*
+   * For each object, the values of frequency, init_addr and size
+   * are cached, so that we do not need to call the corresponding methods
+   * each single time. This leads to a massive improvements in terms of
+   * performances.
+   *
+   * */
+  std::vector<uint32_t> frequency_cache;
+  std::vector<uint32_t> init_addr_cache;
+  std::vector<uint32_t> size_cache;
+
   // Takes care of couting the current clock cycle.
   uint32_t current_cc;
 
