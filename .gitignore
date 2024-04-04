@@ -40,3 +40,7 @@ cmake/
 .cache/
 compile.bash
 TODO.md
+
+# Profiling
+output.png
+profile.sh

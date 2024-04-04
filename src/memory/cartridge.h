@@ -7,16 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include "../bus/bus_obj.h"
-
-#define ROM_SIZE (1 << 14)
-#define RAM_SIZE (1 << 13)
-#define RTC_SIZE 5
-
-#define MBC_ROM_ONLY 0
-#define MBC_1_INIT   0x01
-#define MBC_1_END    0x03
-#define MBC_3_INIT   0x0f
-#define MBC_3_END    0x13
+#include "memory_map.h"
 
 class Cartridge : public Bus_obj  {
 

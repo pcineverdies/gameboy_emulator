@@ -1,5 +1,4 @@
 #include "cartridge.h"
-#include "memory_map.h"
 
 /** Cartridge::read
     Read a data from a cartridge, referring to different
