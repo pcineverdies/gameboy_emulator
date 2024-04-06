@@ -14,7 +14,7 @@ uint8_t Timer::read(uint16_t addr){
 
   // Only 8 msbs of DIV are accessible
   if(addr == 0){
-    res =  DIV >> 8;
+    res =  (DIV >> 8);
   }
   else if (addr == 1){
     res =  TIMA;
@@ -23,7 +23,7 @@ uint8_t Timer::read(uint16_t addr){
     res =  TMA;
   }
   else if (addr == 3){
-    res =  TAC;
+    res =  (TAC | 0b11111000);
   }
   else{
     std::invalid_argument("Invalid address while acessing timer");
@@ -46,22 +46,21 @@ void Timer::write(uint16_t addr, uint8_t data){
   }
   else if (addr == 1){
     // No effect if interrupt is raised on the same T-cycle
-    if(cycles_to_interrupt == 1){
-      return;
-    }
+    if(cycles_to_interrupt == 1) return;
+
+    // Modify the value of TIMA
     TIMA = data;
+
     // Abort interrupt in case TIMA is written in the 4 T-cycles
     // after an overlow
-    if(cycles_to_interrupt > 1){
-      interrupt_aborted = 1;
-    }
+    if(cycles_to_interrupt > 1) interrupt_aborted = 1;
   }
   else if (addr == 2){
     TMA = data;
   }
   // Only 3 lsbs are used
   else if (addr == 3){
-    TAC = (data & 0b00000111);
+    TAC = (data & 0x07);
   }
   else{
     std::invalid_argument("Invalid address while accessing timer");
@@ -79,8 +78,9 @@ void Timer::write(uint16_t addr, uint8_t data){
 Timer::Timer(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 4){
   TMA = 0;
   TIMA = 0;
-  TAC = 0;
-  DIV = 0xABCC;
+  TAC = 0xF8;
+  DIV = 0xAB;
+
   prev_AND_result = 0;
   cycles_to_interrupt = 0;
   interrupt_aborted = 0;
@@ -102,21 +102,34 @@ void Timer::step(Bus_obj* bus){
 
   DIV += 1;
 
+  bit_position = ((TAC & CLOCK_SELECT_MASK) == 0) ? 9 :
+                 ((TAC & CLOCK_SELECT_MASK) == 1) ? 3 :
+                 ((TAC & CLOCK_SELECT_MASK) == 2) ? 5 :
+                                                    7 ;
+
+  bit_timer_enable   = (TAC >> TIMER_ENABLE_POS) & 0x01;
+  bit_position_value = (DIV >>     bit_position) & 0x01;
+
+  // And between the timer enable and nth position of DIV, depending on TAC
+  current_AND_result = bit_timer_enable & bit_position_value;
+
+  if(cycles_to_interrupt > 0){
+
+    // Send and interrupt if 4 T-cycles have passed after an overflow and
+    // no aborted is obtained
+    if(cycles_to_interrupt == 1 and interrupt_aborted == 0){
+      set_interrupt(bus);
+      TIMA = TMA;
+    }
+    cycles_to_interrupt--;
+  }
+
   // In case we are not in a `delay for interrupt` situation
   if(cycles_to_interrupt == 0){
-    if((TAC & CLOCK_SELECT_MASK) == 0) bit_position = 9;
-    if((TAC & CLOCK_SELECT_MASK) == 1) bit_position = 3;
-    if((TAC & CLOCK_SELECT_MASK) == 2) bit_position = 5;
-    if((TAC & CLOCK_SELECT_MASK) == 3) bit_position = 7;
-
-    bit_timer_enable = (TAC & (1 << TIMER_ENABLE_POS)) >> TIMER_ENABLE_POS;
-    bit_position_value = (DIV & (1 << bit_position)) >> bit_position;
-
-    // And between the timer enable and nth position of DIV, depending on TAC
-    current_AND_result = bit_timer_enable & bit_position_value;
 
     // If falling edge wrt previous T-cycle
     if(prev_AND_result == 1 and current_AND_result == 0){
+
       // If overflow, enter in `delay for interrupt` mode
       if(TIMA == 0xff){
         cycles_to_interrupt = 4;
@@ -126,19 +139,10 @@ void Timer::step(Bus_obj* bus){
       // Increment TIMA, possibly with overflow
       TIMA++;
     }
+  }
 
-    // Store current result
-    prev_AND_result = current_AND_result;
-  }
-  else{
-    // Send and interrupt if 4 T-cycles have passed after an overflow and
-    // no aborted is obtained
-    if(cycles_to_interrupt == 1 and interrupt_aborted == 0){
-      set_interrupt(bus);
-      TIMA = TMA;
-    }
-    cycles_to_interrupt--;
-  }
+  // Store current result
+  prev_AND_result = current_AND_result;
 }
 
 /** Timer::set_interrupt

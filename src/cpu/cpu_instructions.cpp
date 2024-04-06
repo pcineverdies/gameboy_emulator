@@ -90,22 +90,19 @@ bool Cpu::execute_x8_lsm(Bus_obj* bus){
 
   if(xx == LD_r_r and _opcode!= HALT_OPCODE){
     if(_state == State::STATE_1){
-      _state = State::STATE_2;
-    }
-    else if(_state == State::STATE_2){
+      _u8 = read_x8(bus, zzz);
 
       // One extra state if operand was (HL). There is not combination of (HL) being
       // both input and output
       if(yyy == LH_INDEX or zzz == LH_INDEX){
-        _state = State::STATE_3;
+        _state = State::STATE_2;
       }
       else{
-        write_x8(bus, yyy, read_x8(bus, zzz));
-        _state = State::STATE_1;
+        write_x8(bus, yyy, _u8);
       }
     }
-    else if(_state == State::STATE_3){
-      write_x8(bus, yyy, read_x8(bus, zzz));
+    else if(_state == State::STATE_2){
+      write_x8(bus, yyy, _u8);
       _state = State::STATE_1;
     }
     else std::runtime_error("Invalid state reached for instruction LD_r_r");
@@ -895,31 +892,39 @@ void Cpu::execute_x8_rsb(Bus_obj* bus){
 
   /*
    * rsb instructions which do not involve (HL) takes 2 M-cycles;
-   * instructions with (HL) require 4 M-cycles:
+   * instructions with (HL) require either 3 or 4 M-cycles:
+   *
+   * In case of 4 M-cycles (read and modify (HL))
    * - fetch 1
-   * - fetch 2
    * - read (HL)
-   * - modify (HL)
+   * - wait (probably compute state)I'm stuck with the
+   * - write (HL)
+   *
+   * In case of 3 M-cycles (read(HL))
+   * - fetch 1
+   * - read (HL)
+   * - set flags
    *
    * This sequence is handled through the states STATE_CB_X
    * */
 
   // If not LH_INDEX, then this is the second and last step of the CP operation.
-  if(yyy != LH_INDEX){
+  if(zzz != LH_INDEX){
     _u8 = read_x8(bus, zzz);
     _state = State::STATE_CB_4;
   }
   else{
 
-    // Skip fetch 2 stage
+    // Read (HL)
     if(_state == State::STATE_CB_2){
-      _state = State::STATE_CB_3;
+      _u8 = read_x8(bus, zzz);
+      if(check_mask(_opcode, CB_BIT_OPCODE)) _state = State::STATE_CB_4;
+      else                                   _state = State::STATE_CB_3;
       return;
     }
 
-    // Read (HL)
+    // Skip stage
     if(_state == State::STATE_CB_3){
-      _u8 = read_x8(bus, zzz);
       _state = State::STATE_CB_4;
       return;
     }

@@ -7,7 +7,7 @@
 #include <string>
 #include <stdexcept>
 
-#define CLOCK_SELECT_MASK 0x03
+#define CLOCK_SELECT_MASK 0b00000011
 #define TIMER_ENABLE_POS 2
 
 class Timer : public Bus_obj {
