@@ -1,4 +1,27 @@
-# Game Boy (Color) Emulator
+# Game Boy Emulator
+
+## How to compile
+
+```bash
+git clone https://github.com/pcineverdies/gameboy_emulator
+cd gameboy_emulator
+mkdir build
+cd build
+cmake .. [-DDEBUG=1] [-DPROFILE=1]
+make
+```
+
+By adding the macro `DEBUG`, some debug information are displayed from the console.
+By adding the macro `PROFILE`, the binary is compiled so that `gprof` can be used for profiling.
+
+## How to use
+
+```bash
+./build/gameboy ./path/to/rom [fixed_fps]
+```
+
+The main program requires the path to the ROM as first argument. 
+If a second argument is provided, the emulator runs at ~60FPS, otherwise it runs as fast as possible.
 
 ## Resources
 
