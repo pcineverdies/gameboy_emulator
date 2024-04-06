@@ -1,8 +1,6 @@
 #include "bus.h"
-#include <chrono>
-#include <thread>
-#include <iostream>
 #include <unistd.h>
+#include <SDL.h>
 
 /** Bus::Bus
     Constructor of the class. It just calls the parent constructor.
@@ -12,11 +10,14 @@
     @param init_addr uint16_t Initial address of the object once connected to the bus
     @param size uint16_t Size of the addressable space of the object
     @param frequency uint32_t Working frequency of the clock connected to the bus
+    @param fixed_fps uint8_t If set, fps are set to 60 using delay
 
 */
-Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint32_t frequency) :
+Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint32_t frequency, uint8_t fixed_fps) :
   Bus_obj(name, init_addr, size){
   this->set_frequency(frequency);
+  current_cycles_counting = 0;
+  this->fixed_fps = fixed_fps;
 }
 
 /** Bus::add_to_bus
@@ -95,10 +96,6 @@ uint8_t Bus::read(uint16_t addr){
       return bus_objects[i]->read(addr - init_addr);
   }
 
-  #ifdef __DEBUG
-    printf("Attempt to read an invalid location: %04x\n", addr);
-  #endif
-
   return 0xff;
 }
 
@@ -129,10 +126,6 @@ void Bus::write(uint16_t addr, uint8_t data){
     }
   }
 
-  #ifdef __DEBUG
-    printf("Attempt to read at invalid location: %04x\n", addr);
-  #endif
-
 }
 
 /** Bus::step
@@ -142,10 +135,17 @@ void Bus::write(uint16_t addr, uint8_t data){
 */
 void Bus::step(Bus_obj* bus){
 
-  auto start =  std::chrono::system_clock::now();
   uint32_t bus_frequency = this->frequency;
   uint32_t obj_frequency;
-  uint32_t bus_step_size = 4;
+
+  // FPS handler
+  uint32_t frame_time = 0;
+  const uint32_t frame_delay = 1000 / 60;
+  const uint32_t cycles_before_pausing = 70224;
+
+  // Reset current tick
+  if(current_cycles_counting == 0)
+    initial_tick_frame = SDL_GetTicks();
 
   for(uint32_t i = 0; i < bus_objects.size(); i++){
 
@@ -157,15 +157,32 @@ void Bus::step(Bus_obj* bus){
     // Try the next 4 T-cycles and possibly perform all the steps.
     // This is a way to lose a bit of timing accuracy, while gaining
     // performances in the emulator
-    for(uint32_t j = 0; j < bus_step_size; j++){
+    for(uint32_t j = 0; j < BUS_STEP_SIZE; j++){
       if((current_cc + j) % (bus_frequency / obj_frequency) == 0)
         bus_objects[i]->step(bus);
     }
 
   }
 
-  // while((std::chrono::system_clock::now() - start).count() < 166 * bus_step_size);
+  if(fixed_fps){
 
-  current_cc += bus_step_size;
+    // If the expected amount of T-cycles have passed
+    if(current_cycles_counting == cycles_before_pausing){
+
+      // Stop until the right time has passed to manage 60FPS
+      frame_time = SDL_GetTicks() - initial_tick_frame;
+      if(frame_delay > frame_time) SDL_Delay(frame_delay - frame_time - 2);
+
+      // Reset cycle counting
+      current_cycles_counting = 0;
+    }
+    else{
+
+      // Increment cycle counting
+      current_cycles_counting += BUS_STEP_SIZE;
+    }
+  }
+
+  current_cc += BUS_STEP_SIZE;
 
 }

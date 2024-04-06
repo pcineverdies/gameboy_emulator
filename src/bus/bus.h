@@ -6,6 +6,10 @@
 #include <iostream>
 #include <vector>
 #include "bus_obj.h"
+#include "../PPU/PPU_def.h"
+
+#define BUS_STEP_SIZE 4
+#define FPS 60
 
 class Bus : public Bus_obj{
 
@@ -33,9 +37,18 @@ class Bus : public Bus_obj{
   // Takes care of couting the current clock cycle.
   uint32_t current_cc;
 
+  // How many cycles have been passed since last frame randered
+  uint32_t current_cycles_counting;
+
+  // Last initial SDL tick since new frame was rendered
+  uint32_t initial_tick_frame;
+
+  // Fixes FPS to 60, or let them go as fast as possible
+  uint8_t fixed_fps;
+
 public:
 
-  Bus(std::string, uint16_t, uint16_t, uint32_t);
+  Bus(std::string, uint16_t, uint16_t, uint32_t, uint8_t = 0);
 
   // Perform a read operation
   uint8_t read(uint16_t);
