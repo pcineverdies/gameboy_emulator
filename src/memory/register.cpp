@@ -35,8 +35,8 @@ void Register::write(uint16_t addr, uint8_t data){
     @param init_addr uint16_t Initial address of the object once connected to the bus
 
 */
-Register::Register(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 1){
+Register::Register(std::string name, uint16_t init_addr, uint8_t init_value) : Bus_obj(name, init_addr, 1){
   this->set_frequency(0);
-  this->reg = 0;
+  this->reg = init_value;
 }
 

@@ -75,4 +75,23 @@
 #define MBC_3_INIT   0x0f
 #define MBC_3_END    0x13
 
+#define MMU_CART_INIT_ADDR      0x0000
+#define MMU_CART_SIZE           0xC000
+#define MMU_WRAM_INIT_ADDR      0xC000
+#define MMU_WRAM_SIZE           0x2000
+#define MMU_OAM_INIT_ADDR       0xFE00
+#define MMU_OAM_SIZE            0x00A0
+#define MMU_JOYPAD_INIT_ADDR    0xFF00
+#define MMU_SERIAL_INIT_ADDR    0xFF01
+#define MMU_TIMER_INIT_ADDR     0xFF04
+#define MMU_IF_REG_INIT_ADDR    0xFF0F
+#define MMU_IF_REG_INIT_VAL     0xE1
+#define MMU_PPU_INIT_ADDR       0xFF40
+#define MMU_BROM_EN_INIT_ADDR   0xFF50
+#define MMU_HRAM_INIT_ADDR      0xFF80
+#define MMU_HRAM_SIZE           0x007F
+#define MMU_IE_REG_INIT_ADDR    0xFFFF
+#define MMU_IE_REG_INIT_VAL     0x00
+
+
 #endif // !__MEMORY_MAP

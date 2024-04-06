@@ -413,7 +413,6 @@ void PPU::VBLANK_step(Bus_obj*){
   // FPS counter variables
   static int counter = 0;
   static auto start = std::chrono::system_clock::now();
-  static auto end = std::chrono::system_clock::now();
   #endif
 
   _VBLANK_padding_to_wait--;
@@ -435,10 +434,8 @@ void PPU::VBLANK_step(Bus_obj*){
 
     #ifdef __DEBUG
     // FPS counting
-    counter++;
-    if(counter % 60 == 0){
-      end =  std::chrono::system_clock::now();
-      auto elapsed = end - start;
+    if(++counter % 60 == 0){
+      auto elapsed = std::chrono::system_clock::now() - start;
       std::cout << "FPS\t" << 60*((float)(1000000000)/(elapsed.count())) << '\n';
       start =  std::chrono::system_clock::now();
     }
