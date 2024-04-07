@@ -24,8 +24,7 @@ uint8_t Register::read(uint16_t addr){
 void Register::write(uint16_t addr, uint8_t data){
   if(addr != 0)
     throw std::invalid_argument( "Address of provided to " + name + " over the limit\n" );
-
-  this->reg = data;
+  this->reg = data | (uint8_t)(~((1 << _available_bits) - 1));
 }
 
 /** Register::Register
@@ -35,8 +34,9 @@ void Register::write(uint16_t addr, uint8_t data){
     @param init_addr uint16_t Initial address of the object once connected to the bus
 
 */
-Register::Register(std::string name, uint16_t init_addr, uint8_t init_value) : Bus_obj(name, init_addr, 1){
+Register::Register(std::string name, uint16_t init_addr, uint8_t available_bits, uint8_t init_value) : Bus_obj(name, init_addr, 1){
   this->set_frequency(0);
   this->reg = init_value;
+  this->_available_bits = available_bits;
 }
 

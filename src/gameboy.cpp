@@ -15,17 +15,17 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus = new Bus("BUS", 0, 0xFFFF, BUS_FREQUENCY, fixed_fps);
 
   // Create all the components to be attached to the bus
-  this->cart = new Cartridge(   "CART",    MMU_CART_INIT_ADDR,   MMU_CART_SIZE        );
-  this->wram = new Memory(      "WRAM",    MMU_WRAM_INIT_ADDR,   MMU_WRAM_SIZE        );
-  this->oam = new Memory(       "OAM",     MMU_OAM_INIT_ADDR,    MMU_OAM_SIZE         );
-  this->joypad = new Joypad(    "JOYPAD",  MMU_JOYPAD_INIT_ADDR                       );
-  this->serial = new Serial(    "SERIAL",  MMU_SERIAL_INIT_ADDR                       );
-  this->timer = new Timer(      "TIMER",   MMU_TIMER_INIT_ADDR                        );
-  this->if_reg = new Register(  "IF_REG",  MMU_IF_REG_INIT_ADDR,  MMU_IF_REG_INIT_VAL );
-  this->ppu = new PPU(          "PPU",     MMU_PPU_INIT_ADDR                          );
-  this->brom_en = new Register( "BROM_EN", MMU_BROM_EN_INIT_ADDR                      );
-  this->hram = new Memory(      "HRAM",    MMU_HRAM_INIT_ADDR,    MMU_HRAM_SIZE       );
-  this->ie_ref = new Register(  "IE_REG",  MMU_IE_REG_INIT_ADDR,  MMU_IE_REG_INIT_VAL );
+  this->cart = new Cartridge(   "CART",    MMU_CART_INIT_ADDR,   MMU_CART_SIZE       );
+  this->wram = new Memory(      "WRAM",    MMU_WRAM_INIT_ADDR,   MMU_WRAM_SIZE       );
+  this->oam = new Memory(       "OAM",     MMU_OAM_INIT_ADDR,    MMU_OAM_SIZE        );
+  this->joypad = new Joypad(    "JOYPAD",  MMU_JOYPAD_INIT_ADDR                      );
+  this->serial = new Serial(    "SERIAL",  MMU_SERIAL_INIT_ADDR                      );
+  this->timer = new Timer(      "TIMER",   MMU_TIMER_INIT_ADDR                       );
+  this->ppu = new PPU(          "PPU",     MMU_PPU_INIT_ADDR                         );
+  this->brom_en = new Register( "BROM_EN", MMU_BROM_EN_INIT_ADDR, MMU_BROM_EN_SIZE   );
+  this->hram = new Memory(      "HRAM",    MMU_HRAM_INIT_ADDR,    MMU_HRAM_SIZE      );
+  this->ie_ref = new Register(  "IE_REG",  MMU_IE_REG_INIT_ADDR,  MMU_IE_REG_SIZE, MMU_IE_REG_INIT_VAL );
+  this->if_reg = new Register(  "IF_REG",  MMU_IF_REG_INIT_ADDR,  MMU_IF_REG_SIZE, MMU_IF_REG_INIT_VAL );
 
   this->cpu = new Cpu("CPU", CPU_FREQUENCY);
 

@@ -870,7 +870,7 @@ bool Cpu::execute_control_misc(Bus_obj* bus){
   // ============================================================================
 
   if(_opcode == EI_OPCODE){
-    _ei_delayed = 1;
+    _ei_delayed = 2;
 
     return true;
   }
@@ -1202,6 +1202,8 @@ uint8_t Cpu::cp_x8(uint8_t op1, uint8_t op2){
 
 */
 void Cpu::halt_handler(Bus_obj* bus){
+  uint8_t IE = read_IE(bus);
+  uint8_t IF = read_IF(bus);
 
   // If IME is 1, enter halt mode and continue executing
   // the current instruction until a new interrupt
@@ -1214,7 +1216,7 @@ void Cpu::halt_handler(Bus_obj* bus){
   // If IME == 0: if it was already in halt mode, exit once that
   // a new interrupt it raised. Otherwise stay in halt mode.
   if(_is_halted == 1){
-    if(read_IF(bus) & read_IE(bus)){
+    if(IF & IE & 0x1f){
       _is_halted = 0;
     }
     else{
@@ -1225,19 +1227,18 @@ void Cpu::halt_handler(Bus_obj* bus){
 
   // If IME == 0 and it was not in halt mode, then enter halt
   // mode in case no interrupt is present
-  if(_is_halted == 0 and !(read_IF(bus) & read_IE(bus))){
+  if(_is_halted == 0 and !(IF & IE & 0x1f)){
     _is_halted = 1;
     registers.PC--;
     return;
   }
 
   // If an interrupt is present, then:
-  if(_is_halted == 0 and (read_IF(bus) & read_IE(bus))){
-
-    IME = 1;
+  if(_is_halted == 0 and (IF & IF & 0x1f)){
 
     // handle the interrupt even if the previous instruction was `ie`
     if(_ei_delayed){
+      IME = 1;
       _ei_delayed = 0;
       registers.PC--;
       interrupt_handler(bus);

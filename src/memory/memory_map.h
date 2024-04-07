@@ -102,12 +102,15 @@
 #define MMU_TIMER_INIT_ADDR     0xFF04
 #define MMU_IF_REG_INIT_ADDR    0xFF0F
 #define MMU_IF_REG_INIT_VAL     0xE1
+#define MMU_IF_REG_SIZE         5
 #define MMU_PPU_INIT_ADDR       0xFF40
 #define MMU_BROM_EN_INIT_ADDR   0xFF50
+#define MMU_BROM_EN_SIZE        8
 #define MMU_HRAM_INIT_ADDR      0xFF80
 #define MMU_HRAM_SIZE           0x007F
 #define MMU_IE_REG_INIT_ADDR    0xFFFF
 #define MMU_IE_REG_INIT_VAL     0x00
+#define MMU_IE_REG_SIZE         5
 
 
 #endif // !__MEMORY_MAP

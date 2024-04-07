@@ -53,16 +53,18 @@ uint8_t Cpu::fetch(Bus_obj* bus){
 */
 void Cpu::step(Bus_obj* bus){
 
+  // Handle ei instruction, set IME to 1 at the beginning of
+  // the second cycle after ei was used.
+  if(_ei_delayed){
+    _ei_delayed--;
+    if(_ei_delayed == 0) IME = 1;
+  }
+
   if(interrupt_handler(bus)){
     return;
   }
 
   if(_state == State::STATE_1){
-
-    if(_ei_delayed == 1){
-      IME = 1;
-      _ei_delayed = 0;
-    }
 
     _opcode = fetch(bus);
 
@@ -115,7 +117,7 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
   if(_state == State::STATE_1){
 
     // No interrupt to handle
-    if(IME == 0 or ((IE & IF) == 0)) return false;
+    if(IME == 0 or ((IE & IF & 0x1f) == 0)) return false;
 
     // Out from halted state
     if(_is_halted){
@@ -158,7 +160,7 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
   else if(_state == State::STATE_I_5){
 
     // If no interrupt is request anymore, jump to reset vector
-    if((IE & IF) == 0){
+    if((IE & IF & 0x1f) == 0){
       registers.PC = 0;
     }
     else{
