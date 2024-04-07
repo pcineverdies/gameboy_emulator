@@ -25,6 +25,7 @@ uint8_t Cartridge::read(uint16_t addr){
   if     (MBC == MBC_ROM_ONLY)                    return rom_only_read(addr);
   else if(MBC >= MBC_1_INIT and MBC <= MBC_1_END) return MBC1_read(addr);
   else if(MBC >= MBC_3_INIT and MBC <= MBC_3_END) return MBC3_read(addr);
+  else if(MBC >= MBC_5_INIT and MBC <= MBC_5_END) return MBC5_read(addr);
 
   else throw std::runtime_error(
     "The current MBC is not supported by the emulator"
@@ -48,6 +49,7 @@ void Cartridge::write(uint16_t addr, uint8_t data){
   if     (MBC == MBC_ROM_ONLY)                    rom_only_write(addr, data);
   else if(MBC >= MBC_1_INIT and MBC <= MBC_1_END) MBC1_write(addr, data);
   else if(MBC >= MBC_3_INIT and MBC <= MBC_3_END) MBC3_write(addr, data);
+  else if(MBC >= MBC_5_INIT and MBC <= MBC_5_END) MBC5_write(addr, data);
   else throw std::runtime_error(
     "The current MBC is not supported by the emulator"
   );
@@ -331,4 +333,72 @@ void Cartridge::set_boot_rom(){
   for(uint32_t i = 0; i < dmg_boot_rom.size(); i++)
     _BOOT_ROM[i] = dmg_boot_rom[i];
 
+}
+
+/** Cartridge::MBC5_read
+    Perform different accesses depending on the provided address,
+    with respect to the MBC5 cartridge specifications.
+
+    @param addr uint16_t address to read
+    @return uint8_t read byte
+
+*/
+uint8_t Cartridge::MBC5_read(uint16_t addr){
+
+  uint16_t rom_to_use = _current_rom | (_current_rom_up << 8);
+
+  // Bank 0 rom
+  if(addr < ROM_B00_END_ADDR){
+    return _rom_banks[0][addr];
+  }
+  // Bank N rom
+  else if(addr >= ROM_BNN_INIT_ADDR and addr < ROM_BNN_END_ADDR){
+    return _rom_banks[rom_to_use % _rom_bank_size][addr % ROM_SIZE];
+  }
+  // Use RAM (no RTC available in MBC5)
+  else if(addr >= RAM_BNN_INIT_ADDR and addr < RAM_BNN_END_ADDR){
+    if(!_is_ram_enabled){
+      return 0xff;
+    }
+    if(_ram_bank_size == 0){
+      return 0xff;
+    }
+    if(_current_ram < _ram_bank_size){
+      return _ram_banks[_current_ram][addr % RAM_SIZE];
+    }
+    return 0xff;
+  }
+
+  throw std::runtime_error("Address not available in MBC5 cartridges");
+}
+
+/** Cartridge::MBC5_write
+    Perform different accesses depending on the provided address,
+    with respect to the MBC5 cartridge specifications.
+
+    @param addr uint16_t address to write
+    @param data uint8_t  byte to write
+
+*/
+void Cartridge::MBC5_write(uint16_t addr, uint8_t data){
+
+  if(addr >= MBC5_WRITE1_INIT_ADDR and addr < MBC5_WRITE1_END_ADDR){
+    _is_ram_enabled = (data == 0x0a) ? 1 :
+                      (data == 0x00) ? 0 :
+                      _is_ram_enabled;
+  }
+  if(addr >= MBC5_WRITE2_INIT_ADDR and addr < MBC5_WRITE2_END_ADDR){
+    _current_rom = data;
+  }
+  if(addr >= MBC5_WRITE3_INIT_ADDR and addr < MBC5_WRITE3_END_ADDR){
+    _current_rom_up = data & 0x01;
+  }
+  if(addr >= MBC5_WRITE4_INIT_ADDR and addr < MBC5_WRITE4_END_ADDR){
+    _current_ram = data;
+  }
+  if(addr >= MBC_WRITE4_INIT_ADDR){
+    if(!_is_ram_enabled) return;
+    if(_is_ram_enabled and _ram_bank_size == 0) return;
+    _ram_banks[_current_ram % _ram_bank_size][addr % RAM_SIZE] = data;
+  }
 }

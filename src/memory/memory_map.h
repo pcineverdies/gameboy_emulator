@@ -61,6 +61,18 @@
 #define MBC_WRITE4_INIT_ADDR  0xa000
 #define MBC_WRITE4_END_ADDR   0xc000
 
+#define MBC5_WRITE1_INIT_ADDR  0x0000
+#define MBC5_WRITE1_END_ADDR   0x1FFF
+
+#define MBC5_WRITE2_INIT_ADDR  0x2000
+#define MBC5_WRITE2_END_ADDR   0x2FFF
+
+#define MBC5_WRITE3_INIT_ADDR  0x3000
+#define MBC5_WRITE3_END_ADDR   0x3FFF
+
+#define MBC5_WRITE4_INIT_ADDR  0x4000
+#define MBC5_WRITE4_END_ADDR   0x5FFF
+
 #define MBC3_RAM_END_ADDR 0x04
 #define MBC3_RTC_INIT_ADDR 0x08
 #define MBC3_RTC_END_ADDR  0x0d
@@ -74,6 +86,8 @@
 #define MBC_1_END    0x03
 #define MBC_3_INIT   0x0f
 #define MBC_3_END    0x13
+#define MBC_5_INIT   0x19
+#define MBC_5_END    0x1E
 
 #define MMU_BOOT_INIT_ADDR      0x0000
 #define MMU_BOOT_SIZE           0x0100

@@ -17,6 +17,7 @@ class Cartridge : public Bus_obj  {
     uint16_t _ram_bank_size;
 
     uint8_t _current_rom;
+    uint8_t _current_rom_up;
     uint8_t _current_ram;
     uint8_t _is_ram_enabled;
     uint8_t _banking_mode;
@@ -38,6 +39,8 @@ class Cartridge : public Bus_obj  {
     void    MBC1_write(uint16_t, uint8_t);
     uint8_t MBC3_read(uint16_t);
     void    MBC3_write(uint16_t, uint8_t);
+    uint8_t MBC5_read(uint16_t);
+    void    MBC5_write(uint16_t, uint8_t);
     void    set_RTC();
     void    set_boot_rom();
 
