@@ -102,6 +102,8 @@ bool Cpu::execute_x8_lsm(Bus_obj* bus){
       }
     }
     else if(_state == State::STATE_2){
+      // Read (HL) at the second cycle for proper timing
+      _u8 = read_x8(bus, zzz);
       write_x8(bus, yyy, _u8);
       _state = State::STATE_1;
     }
@@ -896,35 +898,36 @@ void Cpu::execute_x8_rsb(Bus_obj* bus){
    *
    * In case of 4 M-cycles (read and modify (HL))
    * - fetch 1
+   * - fetch 2
    * - read (HL)
-   * - wait (probably compute state)I'm stuck with the
    * - write (HL)
    *
    * In case of 3 M-cycles (read(HL))
    * - fetch 1
-   * - read (HL)
-   * - set flags
+   * - fetch 2
+   * - read (HL) and modify flags
    *
    * This sequence is handled through the states STATE_CB_X
    * */
 
   // If not LH_INDEX, then this is the second and last step of the CP operation.
   if(zzz != LH_INDEX){
-    _u8 = read_x8(bus, zzz);
+      _u8 = read_x8(bus, zzz);
     _state = State::STATE_CB_4;
   }
   else{
 
-    // Read (HL)
+    // Second stage of instructions using (LH); either they are made of 4
+    // or 3 M-cycles
     if(_state == State::STATE_CB_2){
-      _u8 = read_x8(bus, zzz);
       if(check_mask(_opcode, CB_BIT_OPCODE)) _state = State::STATE_CB_4;
       else                                   _state = State::STATE_CB_3;
       return;
     }
 
-    // Skip stage
+    // If they are made of 4 M-cycles, in the third cycle you read (HL)
     if(_state == State::STATE_CB_3){
+      _u8 = read_x8(bus, zzz);
       _state = State::STATE_CB_4;
       return;
     }
@@ -933,6 +936,11 @@ void Cpu::execute_x8_rsb(Bus_obj* bus){
   // Perform the operation and write the result back, either to the appropriate
   // register or to (HL)
   if(_state == State::STATE_CB_4){
+
+    // If an instruction using (HL) is made of 3 M-cycles, the last cycle is
+    // also the one in which it fetches the operand.
+    if(check_mask(_opcode, CB_BIT_OPCODE))
+      _u8 = read_x8(bus, zzz);
 
     // Bit N and H are always reset in instructions which are not BIT, RES and SET
     if(check_mask(_opcode, CB_BLOCK0_OPCODE)){
