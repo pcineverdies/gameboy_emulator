@@ -108,11 +108,11 @@ void Cpu::step(Bus_obj* bus){
 */
 bool Cpu::interrupt_handler(Bus_obj* bus){
 
+  uint8_t IE = read_IE(bus);
+  uint8_t IF = read_IF(bus);
+
   // If in fetch stage, check if an interrupt is to be handled or not
   if(_state == State::STATE_1){
-
-    uint8_t IE = read_IE(bus);
-    uint8_t IF = read_IF(bus);
 
     // No interrupt to handle
     if(IME == 0 or ((IE & IF) == 0)) return false;
@@ -123,18 +123,9 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
       registers.PC++;
     }
 
+    // Interrupt to handle, but the required one is chosen
+    // at a later M-cycle
     IME = 0;
-
-    // TODO: This check should be handled in a later stage of
-    // the interrupt. Some games might not work due to this.
-    if     (IE & IF & IF_VBLANK) _interrupt_to_handle = 0; // Vblank
-    else if(IE & IF & IF_LCD)    _interrupt_to_handle = 1; // LCD
-    else if(IE & IF & IF_TIMER)  _interrupt_to_handle = 2; // Timer
-    else if(IE & IF & IF_SERIAL) _interrupt_to_handle = 3; // Serial
-    else if(IE & IF & IF_JOYPAD) _interrupt_to_handle = 4; // Joypad
-
-    // Remove the interrupt request from IF
-    write_IF(bus, IF & ~(1 << _interrupt_to_handle));
     _state = State::STATE_I_2;
 
     return true;
@@ -166,7 +157,22 @@ bool Cpu::interrupt_handler(Bus_obj* bus){
   // Modify the program counter according to the interrupt that is handled.
   else if(_state == State::STATE_I_5){
 
-    registers.PC = 0x40 + 0x08 * _interrupt_to_handle;
+    // If no interrupt is request anymore, jump to reset vector
+    if((IE & IF) == 0){
+      registers.PC = 0;
+    }
+    else{
+      if     (IE & IF & IF_VBLANK) _interrupt_to_handle = 0; // Vblank
+      else if(IE & IF & IF_LCD)    _interrupt_to_handle = 1; // LCD
+      else if(IE & IF & IF_TIMER)  _interrupt_to_handle = 2; // Timer
+      else if(IE & IF & IF_SERIAL) _interrupt_to_handle = 3; // Serial
+      else if(IE & IF & IF_JOYPAD) _interrupt_to_handle = 4; // Joypad
+
+      // Remove the interrupt request from IF
+      write_IF(bus, IF & ~(1 << _interrupt_to_handle));
+      registers.PC = 0x40 + 0x08 * _interrupt_to_handle;
+    }
+
 
     _state = State::STATE_1;
     return true;
