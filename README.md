@@ -17,11 +17,14 @@ By adding the macro `PROFILE`, the binary is compiled so that `gprof` can be use
 ## How to use
 
 ```bash
-./build/gameboy ./path/to/rom [fixed_fps]
+./build/gameboy --rom ./path/to/rom [--fixed_fps]
 ```
 
-The main program requires the path to the ROM as first argument. 
-If a second argument is provided, the emulator runs at ~60FPS, otherwise it runs as fast as possible.
+The argument `--rom path` is required for the emulator to run.
+
+The argument `--fixed_fps` is optional, and fixes the fps of the program during exeuction
+
+The argument `--help` shows an help message for usage.
 
 ## Resources
 

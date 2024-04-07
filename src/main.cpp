@@ -1,13 +1,12 @@
 #include "gameboy.h"
+#include "utils/cli_parser.h"
 
 int main(int argc, char* argv[]){
 
   Gameboy* gb;
+  gb_cli_args_t args = parse_gb_args(argc, argv);
 
-  if(argc < 2 or argc > 3)
-    throw std::invalid_argument("Usage: ./gameboy ./path/to/ROM [fix_FPS]");
-
-  gb = new Gameboy(argv[1], (argc == 3) ? 1 : 0);
+  gb = new Gameboy(args.rom_file_name, args.fixed_fps);
 
   gb->run();
 

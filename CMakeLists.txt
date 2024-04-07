@@ -19,6 +19,7 @@ file(GLOB_RECURSE sources
         "${CMAKE_SOURCE_DIR}/src/IO/*.cpp"
         "${CMAKE_SOURCE_DIR}/src/PPU/*.cpp"
         "${CMAKE_SOURCE_DIR}/src/gameboy.cpp"
+        "${CMAKE_SOURCE_DIR}/src/utils/*.cpp"
         "${CMAKE_SOURCE_DIR}/src/main.cpp"
         )
 
