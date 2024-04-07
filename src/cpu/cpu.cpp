@@ -21,7 +21,7 @@ Cpu::Cpu(std::string name, uint32_t frequency) : Bus_obj(name, 0, 0){
   registers.write_H(0x01);
   registers.write_L(0x4d);
 
-  registers.PC = 0x0100;
+  registers.PC = 0x0000;
   registers.SP = 0xfffe;
 
   IME = 1;

@@ -75,6 +75,8 @@
 #define MBC_3_INIT   0x0f
 #define MBC_3_END    0x13
 
+#define MMU_BOOT_INIT_ADDR      0x0000
+#define MMU_BOOT_SIZE           0x0100
 #define MMU_CART_INIT_ADDR      0x0000
 #define MMU_CART_SIZE           0xC000
 #define MMU_WRAM_INIT_ADDR      0xC000
