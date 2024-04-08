@@ -26,6 +26,8 @@ file(GLOB_RECURSE sources
 add_executable(gameboy ${sources})
 
 target_link_libraries(gameboy PRIVATE SDL2::SDL2)
+target_compile_features(gameboy PRIVATE cxx_std_17)
+
 
 if(DEBUG)
   add_compile_definitions(__DEBUG)
