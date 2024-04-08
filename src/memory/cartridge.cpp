@@ -1,4 +1,6 @@
 #include "cartridge.h"
+#include <iostream>
+#include <filesystem>
 
 /** Cartridge::read
     Read a data from a cartridge, referring to different
@@ -9,12 +11,10 @@
 */
 uint8_t Cartridge::read(uint16_t addr){
 
-  // Sketchy way to offload the boot-rom. This clearly shows how the bus class requires a
-  // modification, for which read and write functions are required to perform reads and writes
-  // as well. In this case, the cartridge should be connected to the BROM register so that it
-  // can know whether the BOOT ROM is supposed to be on or not
+  // Use the content of BROM_EN to know whether the BOOT ROM
+  // should be used or not.
   if(addr < MMU_BOOT_SIZE and _using_boot_rom){
-    if(addr == MMU_BOOT_SIZE - 1) _using_boot_rom = 0;
+    if(_bus_to_read->read(MMU_BROM_EN_INIT_ADDR) != 0) _using_boot_rom = 0;
     return _BOOT_ROM[addr];
   }
 
@@ -90,6 +90,9 @@ void Cartridge::init_from_file(std::string file_name){
   uint64_t current_address = 0;
   uint32_t current_rom_bank = 0;
 
+  // Save file name
+  _save_file_name = file_name + ".save";
+
   if(stream.is_open()){
 
     while(stream.get(byte)){
@@ -125,7 +128,6 @@ void Cartridge::init_from_file(std::string file_name){
       current_address++;
     }
 
-    set_boot_rom();
   }
   else{
     throw std::invalid_argument(
@@ -143,169 +145,13 @@ void Cartridge::init_from_file(std::string file_name){
     _ram_banks.push_back(std::vector<uint8_t>(RAM_SIZE));
 
   set_boot_rom();
+  reset_save_data_ram();
 }
 
-/** Cartridge::rom_only_read
-    Read the corresponding value from the only available bank
-
-    @param addr uint16_t address to read
-    @return uint8_t read byte
-*/
-uint8_t Cartridge::rom_only_read(uint16_t addr){
-  if(addr >= VRAM_INIT_ADDR) throw std::runtime_error("Address not available in ROM_ONLY cartridges");
-  return _rom_banks[addr / ROM_SIZE][addr % ROM_SIZE];
-}
-
-/** Cartridge::rom_only_write
-    Do nothing - writings are skipped
+/** Cartridge::set_boot_rom
+    Set content of boot rom
 
 */
-void Cartridge::rom_only_write(uint16_t, uint8_t){ return; }
-
-/** Cartridge::MBC1_read
-    Perform different accesses depending on the provided address,
-    with respect to the MBC1 cartridge specifications.
-
-    @param addr uint16_t address to read
-    @return uint8_t read byte
-*/
-uint8_t Cartridge::MBC1_read(uint16_t addr){
-
-  // First bank or $10, $20... if banking mode 1 is used
-  if(addr < ROM_B00_END_ADDR){
-    if(_banking_mode == 0) return _rom_banks[0][addr];
-    else                   return _rom_banks[(_current_ram << 5) % _rom_bank_size][addr % ROM_SIZE];
-  }
-  // Other banks
-  else if(addr >= ROM_BNN_INIT_ADDR and addr < ROM_BNN_END_ADDR){
-    return _rom_banks[((_current_ram << 5) + _current_rom) % _rom_bank_size][addr % ROM_SIZE];
-  }
-  // Ram reading if available
-  else if(addr >= RAM_BNN_INIT_ADDR and addr < RAM_BNN_END_ADDR){
-    if(!_ram_bank_size or !_is_ram_enabled) return 0xff;
-    if(_banking_mode == 0) return _ram_banks[0           ][addr % RAM_SIZE];
-    else                   return _ram_banks[_current_ram][addr % RAM_SIZE];
-  }
-
-  throw std::runtime_error("Address not available in MBC1 cartridges");
-
-}
-
-/** Cartridge::MBC1_write
-    Perform different accesses depending on the provided address,
-    with respect to the MBC1 cartridge specifications.
-
-    @param addr uint16_t address to write
-    @param data uint8_t  byte to write
-
-*/
-void Cartridge::MBC1_write(uint16_t addr, uint8_t data){
-
-  // Enable ram
-  if(addr < MBC_WRITE1_END_ADDR){
-    _is_ram_enabled = ((data & 0xf) == 0x0a) ? 1 : 0;
-  }
-  // Choose the rom to use
-  if(addr >= MBC_WRITE2_INIT_ADDR and addr < MBC_WRITE2_END_ADDR){
-    _current_rom = ((data & 0x1f) == 0) ? 1 : (data & 0x1f);
-  }
-  // Choose the ram to use
-  if(addr >= MBC_WRITE3_INIT_ADDR and addr < MBC_WRITE2_END_ADDR){
-    _current_ram = (data & 0x03);
-  }
-  // Write ram
-  if(addr >= MBC_WRITE4_INIT_ADDR){
-    if(!_ram_bank_size or !_is_ram_enabled) return;
-    if(_banking_mode == 0) _ram_banks[0                            ][addr % RAM_SIZE] = data;
-    else                   _ram_banks[_current_ram % _ram_bank_size][addr % RAM_SIZE] = data;
-  }
-
-}
-
-/** Cartridge::MBC3_read
-    Perform different accesses depending on the provided address,
-    with respect to the MBC3 cartridge specifications.
-
-    @param addr uint16_t address to read
-    @return uint8_t read byte
-
-*/
-uint8_t Cartridge::MBC3_read(uint16_t addr){
-
-  // Bank 0 rom
-  if(addr < ROM_B00_END_ADDR){
-    return _rom_banks[0][addr];
-  }
-  // Bank N rom
-  else if(addr >= ROM_BNN_INIT_ADDR and addr < ROM_BNN_END_ADDR){
-    return _rom_banks[_current_rom % _rom_bank_size][addr % ROM_SIZE];
-  }
-  // Use ram or RTC
-  else if(addr >= RAM_BNN_INIT_ADDR and addr < RAM_BNN_END_ADDR){
-    if(!_is_ram_enabled){
-      return 0xff;
-    }
-    if(_is_ram_enabled and _current_ram < MBC3_RAM_END_ADDR and _ram_bank_size == 0){
-      return 0xff;
-    }
-    if(_current_ram < MBC3_RAM_END_ADDR){
-      return _ram_banks[_current_ram][addr % RAM_SIZE];
-    }
-    else if(_current_ram >= MBC3_RTC_INIT_ADDR and _current_ram < MBC3_RTC_END_ADDR){
-      return _RTC[_current_ram - MBC3_RTC_INIT_ADDR];
-    }
-    return 0xff;
-  }
-
-  throw std::runtime_error("Address not available in MBC3 cartridges");
-}
-
-/** Cartridge::MBC3_write
-    Perform different accesses depending on the provided address,
-    with respect to the MBC3 cartridge specifications.
-
-    @param addr uint16_t address to write
-    @param data uint8_t  byte to write
-
-*/
-void Cartridge::MBC3_write(uint16_t addr, uint8_t data){
-
-  // Ram enable
-  if(addr < MBC_WRITE1_END_ADDR){
-    _is_ram_enabled = ((data & 0xf) == 0x0a) ? 1 : 0;
-  }
-  // Pick current rom
-  if(addr >= MBC_WRITE2_INIT_ADDR and addr < MBC_WRITE2_END_ADDR){
-    _current_rom = ((data & 0x7f) == 0) ? 1 : (data & 0x7f);
-  }
-  // Pick current ram
-  if(addr >= MBC_WRITE3_INIT_ADDR and addr < MBC_WRITE3_END_ADDR){
-    _current_ram = data;
-  }
-  // Latch RTC if sequence of 0 -> 1 is written
-  if(addr >= MBC_WRITE5_INIT_ADDR and addr < MBC_WRITE5_END_ADDR){
-    if(data == 0x01 and _RTC_to_latch == 1) set_RTC();
-    _RTC_to_latch = (data == 0x00) ? 1 : 0;
-  }
-  // Write ram
-  if(addr >= MBC_WRITE4_INIT_ADDR){
-    if(!_is_ram_enabled) return;
-    if(_is_ram_enabled and _current_ram < MBC3_RAM_END_ADDR and _ram_bank_size == 0) return;
-    if(_current_ram < MBC3_RAM_END_ADDR) _ram_banks[_current_ram % _ram_bank_size][addr % RAM_SIZE] = data;
-    if(_current_ram >= MBC3_RTC_INIT_ADDR and _current_ram < MBC3_RTC_END_ADDR){
-      _RTC[_current_ram - MBC3_RTC_INIT_ADDR] = data;
-    }
-  }
-}
-
-/** Cartridge::set_RTC
-    Set the current RTC
-
-    TODO
-
-*/
-void Cartridge::set_RTC(){}
-
 void Cartridge::set_boot_rom(){
 
   // Bootinx copyright free boot rom, thanks to hacktix: https://github.com/Hacktix/Bootix
@@ -335,70 +181,70 @@ void Cartridge::set_boot_rom(){
 
 }
 
-/** Cartridge::MBC5_read
-    Perform different accesses depending on the provided address,
-    with respect to the MBC5 cartridge specifications.
-
-    @param addr uint16_t address to read
-    @return uint8_t read byte
+/** Cartridge::save_data_ram
+    The content of the RAM is saved on the external file
 
 */
-uint8_t Cartridge::MBC5_read(uint16_t addr){
+void Cartridge::save_data_ram(){
 
-  uint16_t rom_to_use = _current_rom | (_current_rom_up << 8);
+  std::ofstream stream(_save_file_name);
 
-  // Bank 0 rom
-  if(addr < ROM_B00_END_ADDR){
-    return _rom_banks[0][addr];
-  }
-  // Bank N rom
-  else if(addr >= ROM_BNN_INIT_ADDR and addr < ROM_BNN_END_ADDR){
-    return _rom_banks[rom_to_use % _rom_bank_size][addr % ROM_SIZE];
-  }
-  // Use RAM (no RTC available in MBC5)
-  else if(addr >= RAM_BNN_INIT_ADDR and addr < RAM_BNN_END_ADDR){
-    if(!_is_ram_enabled){
-      return 0xff;
-    }
-    if(_ram_bank_size == 0){
-      return 0xff;
-    }
-    if(_current_ram < _ram_bank_size){
-      return _ram_banks[_current_ram][addr % RAM_SIZE];
-    }
-    return 0xff;
-  }
+  // Reset access counter
+  _ram_access_counter = 0;
 
-  throw std::runtime_error("Address not available in MBC5 cartridges");
+  #ifdef __DEBUG
+  printf("Content of RAM is being saved...\n");
+  #endif
+
+  if(stream.is_open()){
+    for(auto& bank : _ram_banks){
+      for(auto& byte : bank) stream << byte;
+    }
+  }
+  else{
+    throw std::invalid_argument("Save file " + this->name + " not opened correctly.");
+  }
 }
 
-/** Cartridge::MBC5_write
-    Perform different accesses depending on the provided address,
-    with respect to the MBC5 cartridge specifications.
-
-    @param addr uint16_t address to write
-    @param data uint8_t  byte to write
+/** Cartridge::reset_save_data_ram
+    Restore the content of the save file from memory, if it exists.
+    The save file contains the content of the cartridge DRAM
 
 */
-void Cartridge::MBC5_write(uint16_t addr, uint8_t data){
+void Cartridge::reset_save_data_ram(){
 
-  if(addr >= MBC5_WRITE1_INIT_ADDR and addr < MBC5_WRITE1_END_ADDR){
-    _is_ram_enabled = (data == 0x0a) ? 1 :
-                      (data == 0x00) ? 0 :
-                      _is_ram_enabled;
+  // Variables to handle reading
+  std::ifstream stream(_save_file_name);
+  char byte;
+
+  // Internal variables
+  uint64_t current_address = 0;
+  uint32_t current_ram_bank = 0;
+
+  // If it's the first time a game is run, or if the game does not have RAM, the
+  // save file does not exist. In this case, we just return
+  if(!std::filesystem::exists(_save_file_name)) return;
+
+  // If the file is not of the expected size, then it might be correupted. In this case, we
+  // do not use it.
+  if(std::filesystem::file_size(_save_file_name) != _ram_bank_size * RAM_SIZE){
+    std::cerr << "File " << _save_file_name << " does not have proper size and cannot be used. Corrupted?";
+    return;
   }
-  if(addr >= MBC5_WRITE2_INIT_ADDR and addr < MBC5_WRITE2_END_ADDR){
-    _current_rom = data;
+
+  // Check if the file is properly opened
+  if(stream.is_open()){
+
+    // Read and store one byte at a time
+    while(stream.get(byte)){
+      current_ram_bank = current_address / RAM_SIZE;
+      _ram_banks[current_ram_bank][current_address % RAM_SIZE] = byte;
+      current_address++;
+    }
+
   }
-  if(addr >= MBC5_WRITE3_INIT_ADDR and addr < MBC5_WRITE3_END_ADDR){
-    _current_rom_up = data & 0x01;
+  else{
+    throw std::invalid_argument("Save file " + this->name + " not opened correctly.");
   }
-  if(addr >= MBC5_WRITE4_INIT_ADDR and addr < MBC5_WRITE4_END_ADDR){
-    _current_ram = data;
-  }
-  if(addr >= MBC_WRITE4_INIT_ADDR){
-    if(!_is_ram_enabled) return;
-    if(_is_ram_enabled and _ram_bank_size == 0) return;
-    _ram_banks[_current_ram % _ram_bank_size][addr % RAM_SIZE] = data;
-  }
+
 }

@@ -10,6 +10,10 @@
 #include "memory_map.h"
 #include "../memory/memory.h"
 
+// How many writings to perform on cartidge ram
+// before saving the content to disc
+#define RAM_ACCESS_COUNTER_MAX 500000
+
 class Cartridge : public Bus_obj  {
 
     uint8_t  MBC;
@@ -27,6 +31,9 @@ class Cartridge : public Bus_obj  {
 
     uint8_t _using_boot_rom;
 
+    std::string _save_file_name;
+    uint32_t _ram_access_counter;
+
     std::vector<std::vector<uint8_t>> _rom_banks;
     std::vector<std::vector<uint8_t>> _ram_banks;
 
@@ -43,8 +50,15 @@ class Cartridge : public Bus_obj  {
     void    MBC5_write(uint16_t, uint8_t);
     void    set_RTC();
     void    set_boot_rom();
+    void    save_data_ram();
+    void    reset_save_data_ram();
 
 public:
+
+  // Use a reference to the bus to perform the reading
+  // of the brom_en register.
+  Bus_obj* _bus_to_read;
+
             Cartridge(std::string, uint16_t, uint16_t);
   uint8_t   read(uint16_t);
   void      write(uint16_t, uint8_t);

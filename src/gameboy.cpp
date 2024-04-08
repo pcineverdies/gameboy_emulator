@@ -51,6 +51,10 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus->add_to_bus(this->hram);
   this->bus->add_to_bus(this->ie_ref);
   this->bus->add_to_bus(this->cpu);
+
+  // Add reference to the bus for specific components which
+  // require out-of-step reading/writing
+  this->cart->_bus_to_read = bus;
 }
 
 /** Gameboy::run
