@@ -7,6 +7,7 @@
 #include "memory/register.h"
 #include "IO/timer.h"
 #include "IO/serial.h"
+#include "APU/APU.h"
 #include "IO/joypad.h"
 #include "memory/cartridge.h"
 #include "PPU/PPU.h"
@@ -28,6 +29,7 @@ class Gameboy{
   Timer*      timer;
   Register*   if_reg;
   PPU*        ppu;
+  APU*        apu;
   Register*   brom_en;
   Memory*     hram;
   Register*   ie_ref;

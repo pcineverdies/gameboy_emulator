@@ -12,7 +12,7 @@
 Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
   // Create bus
-  this->bus = new Bus("BUS", 0, 0xFFFF, BUS_FREQUENCY, fixed_fps);
+  this->bus = new Bus("BUS", 0, 0xFFFF, BUS_FREQUENCY);
 
   // Create all the components to be attached to the bus
   this->cart = new Cartridge(   "CART",    MMU_CART_INIT_ADDR,   MMU_CART_SIZE       );
@@ -22,6 +22,7 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->serial = new Serial(    "SERIAL",  MMU_SERIAL_INIT_ADDR                      );
   this->timer = new Timer(      "TIMER",   MMU_TIMER_INIT_ADDR                       );
   this->ppu = new PPU(          "PPU",     MMU_PPU_INIT_ADDR                         );
+  this->apu = new APU(          "APU",     MMU_APU_INIT_ADDR                         );
   this->brom_en = new Register( "BROM_EN", MMU_BROM_EN_INIT_ADDR, MMU_BROM_EN_SIZE   );
   this->hram = new Memory(      "HRAM",    MMU_HRAM_INIT_ADDR,    MMU_HRAM_SIZE      );
   this->ie_ref = new Register(  "IE_REG",  MMU_IE_REG_INIT_ADDR,  MMU_IE_REG_SIZE, MMU_IE_REG_INIT_VAL );
@@ -37,12 +38,15 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->serial->set_frequency(SERIAL_FREQUENCY);
   this->ppu->set_frequency(BUS_FREQUENCY);
   this->joypad->set_frequency(JOYPAD_FREQUENCY);
+  this->apu->set_frequency(BUS_FREQUENCY);
 
   // Add components to the bus
   this->bus->add_to_bus(this->cart);
   this->bus->add_to_bus(this->wram);
   this->bus->add_to_bus(this->oam);
   this->bus->add_to_bus(this->ppu);
+  if(fixed_fps)
+    this->bus->add_to_bus(this->apu);
   this->bus->add_to_bus(this->timer);
   this->bus->add_to_bus(this->joypad);
   this->bus->add_to_bus(this->serial);

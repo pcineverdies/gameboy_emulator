@@ -43,12 +43,9 @@ class Bus : public Bus_obj{
   // Last initial SDL tick since new frame was rendered
   uint32_t initial_tick_frame;
 
-  // Fixes FPS to 60, or let them go as fast as possible
-  uint8_t fixed_fps;
-
 public:
 
-  Bus(std::string, uint16_t, uint16_t, uint32_t, uint8_t = 0);
+  Bus(std::string, uint16_t, uint16_t, uint32_t);
 
   // Perform a read operation
   uint8_t read(uint16_t);

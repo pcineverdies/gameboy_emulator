@@ -10,14 +10,12 @@
     @param init_addr uint16_t Initial address of the object once connected to the bus
     @param size uint16_t Size of the addressable space of the object
     @param frequency uint32_t Working frequency of the clock connected to the bus
-    @param fixed_fps uint8_t If set, fps are set to 60 using delay
 
 */
-Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint32_t frequency, uint8_t fixed_fps) :
+Bus::Bus(std::string name, uint16_t init_addr, uint16_t size, uint32_t frequency) :
   Bus_obj(name, init_addr, size){
   this->set_frequency(frequency);
   current_cycles_counting = 0;
-  this->fixed_fps = fixed_fps;
 }
 
 /** Bus::add_to_bus
@@ -138,11 +136,6 @@ void Bus::step(Bus_obj* bus){
   uint32_t bus_frequency = this->frequency;
   uint32_t obj_frequency;
 
-  // FPS handler
-  uint32_t frame_time = 0;
-  const uint32_t frame_delay = 1000 / 60;
-  const uint32_t cycles_before_pausing = 70224;
-
   // Reset current tick
   if(current_cycles_counting == 0)
     initial_tick_frame = SDL_GetTicks();
@@ -162,25 +155,6 @@ void Bus::step(Bus_obj* bus){
         bus_objects[i]->step(bus);
     }
 
-  }
-
-  if(fixed_fps){
-
-    // If the expected amount of T-cycles have passed
-    if(current_cycles_counting == cycles_before_pausing){
-
-      // Stop until the right time has passed to manage 60FPS
-      frame_time = SDL_GetTicks() - initial_tick_frame;
-      if(frame_delay > frame_time) SDL_Delay(frame_delay - frame_time - 2);
-
-      // Reset cycle counting
-      current_cycles_counting = 0;
-    }
-    else{
-
-      // Increment cycle counting
-      current_cycles_counting += BUS_STEP_SIZE;
-    }
   }
 
   current_cc += BUS_STEP_SIZE;

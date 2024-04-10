@@ -22,7 +22,8 @@ By adding the macro `PROFILE`, the binary is compiled so that `gprof` can be use
 
 The argument `--rom path` is required for the emulator to run.
 
-The argument `--fixed_fps` is optional, and fixes the fps of the program during exeuction
+The argument `--fixed_fps` is optional, and fixes the fps to ~59.7.
+This is done using audio synch, which means this is the only way to also enable audio in the emulator.
 
 The argument `--help` shows an help message for usage.
 
@@ -35,3 +36,4 @@ The argument `--help` shows an help message for usage.
 - [Gameboy-doctor](https://github.com/robert/gameboy-doctor), to run blargg tests before the display was active;
 - [This timer write-up](https://github.com/Hacktix/GBEDG/blob/master/timers/index.md);
 - [This PPU write-up](https://hacktix.github.io/GBEDG/ppu/);
+- [This APU write-up](https://nightshade256.github.io/2021/03/27/gb-sound-emulation.html#fnref:2)
