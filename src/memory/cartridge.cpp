@@ -15,7 +15,7 @@ uint8_t Cartridge::read(uint16_t addr){
   // should be used or not.
   if(addr < MMU_BOOT_SIZE and _using_boot_rom){
     if(_bus_to_read->read(MMU_BROM_EN_INIT_ADDR) != 0) _using_boot_rom = 0;
-    return _BOOT_ROM[addr];
+    else return _BOOT_ROM[addr];
   }
 
   if(addr >= VRAM_INIT_ADDR and addr < VRAM_END_ADDR){
