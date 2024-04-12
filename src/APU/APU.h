@@ -12,6 +12,7 @@
 #define APU_AUDIO_BUFFER_SIZE 2400
 #define APU_DSP_FREQUENCY     48000
 #define APU_BUS_FREQUENCY     4800000
+#define APU_AMPLITUDE_SCALING 1000
 
 class APU : public Bus_obj {
 
@@ -59,12 +60,36 @@ class APU : public Bus_obj {
   uint8_t _previous_DIV_value;
   uint8_t _current_DIV_value;
 
+  uint8_t _length_step;
+  uint8_t _envelope_step;
+  uint8_t _sweep_step;
+  uint8_t _frame_sequencer;
+
+  // Channel 1 internal variables
+  uint8_t  _channel_1_is_enabled;
+  uint8_t  _channel_1_envelope_timer;
+  uint8_t  _channel_1_volume;
+  uint8_t  _channel_1_sweep_en;
+  uint8_t  _channel_1_sweep_timer;
+  uint16_t _channel_1_shadow_frequency;
+  uint16_t _channel_1_frequency;
+  uint16_t _channel_1_timer;
+  uint16_t _channel_1_wave_duty_position;
+  uint16_t _channel_1_length_timer;
+
   // Channel 2 internal variables
   uint8_t  _channel_2_is_enabled;
+  uint8_t  _channel_2_envelope_timer;
+  uint8_t  _channel_2_volume;
   uint16_t _channel_2_timer;
   uint16_t _channel_2_wave_duty_position;
-  uint16_t _channel_2_frame_sequencer;
   uint16_t _channel_2_length_timer;
+
+  // Channel 3 internal variables
+  uint8_t  _channel_3_is_enabled;
+
+  // Channel 4 internal variables
+  uint8_t  _channel_4_is_enabled;
 
   SDL_AudioDeviceID audio_device;
   SDL_AudioSpec audio_spec;
