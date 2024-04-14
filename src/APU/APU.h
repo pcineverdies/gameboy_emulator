@@ -94,6 +94,11 @@ class APU : public Bus_obj {
 
   // Channel 4 internal variables
   uint8_t  _channel_4_is_enabled;
+  uint8_t  _channel_4_envelope_timer;
+  uint16_t _channel_4_timer;
+  uint16_t _channel_4_length_timer;
+  uint8_t  _channel_4_volume;
+  uint16_t _channel_4_LSFR;
 
   SDL_AudioDeviceID audio_device;
   SDL_AudioSpec audio_spec;
@@ -104,6 +109,7 @@ class APU : public Bus_obj {
   uint16_t channel_3_handler();
   uint16_t channel_4_handler();
   void     reset_registers();
+  uint16_t channel_4_get_period();
 
 public:
 
