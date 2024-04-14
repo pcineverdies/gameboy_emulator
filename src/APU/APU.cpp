@@ -32,58 +32,12 @@ APU::APU(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, APU_RE
   // unpausing the audio device (starts playing):
   SDL_PauseAudioDevice(audio_device, 0);
 
-  NR10 = 0x80;
-  NR11 = 0xBF;
-  NR12 = 0xF3;
-  NR13 = 0xFF;
-  NR14 = 0xBF;
-
-  NR21 = 0x3F;
-  NR22 = 0x00;
-  NR23 = 0xFF;
-  NR24 = 0xBF;
-
-  NR30 = 0x7F;
-  NR31 = 0xFF;
-  NR32 = 0x9F;
-  NR33 = 0xFF;
-  NR34 = 0xBF;
-
-  NR41 = 0xFF;
-  NR42 = 0x00;
-  NR43 = 0x00;
-  NR44 = 0xFB;
-
-  NR50 = 0x77;
-  NR51 = 0xF3;
-  NR52 = 0xF1;
-
   _wave_duty_table.push_back({0, 0, 0, 0, 0, 0, 0, 1}); // 12.5 %
   _wave_duty_table.push_back({0, 0, 0, 0, 0, 0, 1, 1}); // 25.0 %
   _wave_duty_table.push_back({0, 0, 0, 0, 1, 1, 1, 1}); // 50.0 %
   _wave_duty_table.push_back({1, 1, 1, 1, 1, 1, 0, 0}); // 75.0 %
 
-  _previous_DIV_value = 0;
-  _current_DIV_value  = 0;
-  _frame_sequencer    = 0;
-
-  _channel_1_wave_duty_position = 0;
-  _channel_1_envelope_timer     = 0;
-  _channel_1_length_timer       = 0;
-  _channel_1_is_enabled         = 0;
-  _channel_1_volume             = 0;
-  _channel_1_timer              = 0;
-
-  _channel_2_wave_duty_position = 0;
-  _channel_2_envelope_timer     = 0;
-  _channel_2_length_timer       = 0;
-  _channel_2_is_enabled         = 0;
-  _channel_2_volume             = 0;
-  _channel_2_timer              = 0;
-
-  _audio_buffer_counter               = 0;
-  _audio_buffer_downsampling_counter  = 0;
-  memset((void*) _audio_buffer, 0, APU_AUDIO_BUFFER_SIZE * sizeof(uint16_t));
+  reset_registers();
 }
 
 /** APU::read
@@ -178,19 +132,27 @@ uint8_t APU::read(uint16_t addr){
 */
 void APU::write(uint16_t addr, uint8_t data){
 
+  if(addr == APU_NR34_ADDR) printf("NR34: %08b\n", data);
+
   uint16_t frequency;
   uint8_t  sweep_period;
 
   // NR52 is always writable
   // Only bit 7 can be modified, while the msbs are read-only
   if(addr == APU_NR52_ADDR){
-    NR52 = (data & 0x80) | 0b01110000;
+    if(data & 0x80){
+      data = (NR52 | 0x80);
+    }
+    else{
+      data = (NR52 & 0x7F);
+      reset_registers();
+    }
     return;
   }
 
   // In non-CGB consoles, the length registers
   // are always writable, also when the APU is off.
-  if(addr == APU_NR11_ADDR){
+  else if(addr == APU_NR11_ADDR){
     NR11 = data;
   }
   else if(addr == APU_NR21_ADDR){
@@ -204,9 +166,9 @@ void APU::write(uint16_t addr, uint8_t data){
   }
 
   // If the APU is off, all the registers are read-only
-  if((NR52 & 0x80) == 0) return;
+  else if((NR52 & 0x80) == 0) return;
 
-  if(addr >= APU_WPRAM_INIT_ADDR and addr <= APU_WPRAM_END_ADDR){
+  else if(addr >= APU_WPRAM_INIT_ADDR and addr <= APU_WPRAM_END_ADDR){
     WPRAM[addr - APU_WPRAM_INIT_ADDR] = data;
   }
   else if(addr == APU_NR10_ADDR){
@@ -252,10 +214,14 @@ void APU::write(uint16_t addr, uint8_t data){
       _channel_2_length_timer   = 64 - (NR21 & 0x3F);
       _channel_2_is_enabled     = 1;
       _channel_2_volume         = (NR22 >> 4) & 0x0f;
+      frequency                 = NR23 | ((NR24 & 0x07) << 8);
+      _channel_2_timer          = (2048 - frequency) * 4;
     }
   }
   else if(addr == APU_NR30_ADDR){
     NR30 = data | 0b01111111;
+    if(NR30 & 0x80) _channel_3_dac_enabled = 1;
+    else            _channel_3_dac_enabled = 0;
   }
   else if(addr == APU_NR32_ADDR){
     NR32 = data | 0b10011111;
@@ -265,6 +231,13 @@ void APU::write(uint16_t addr, uint8_t data){
   }
   else if(addr == APU_NR34_ADDR){
     NR34 = data | 0b00111000;
+    if(NR34 & 0x80 and _channel_3_dac_enabled){
+      _channel_3_is_enabled     = 1;
+      frequency                 = NR33 | ((NR34 & 0x07) << 8);
+      _channel_3_timer          = (2048 - frequency) * 2;
+      _channel_3_current_sample = 1;
+      _channel_3_length_timer   = 256 - NR31;
+    }
   }
   else if(addr == APU_NR42_ADDR){
     NR42 = data;
@@ -276,7 +249,7 @@ void APU::write(uint16_t addr, uint8_t data){
     NR44 = data | 0b00111111;
   }
   else if(addr == APU_NR50_ADDR){
-    NR50 = data;
+    NR50 = (data & 0x77);
   }
   else if(addr == APU_NR51_ADDR){
     NR51 = data;
@@ -326,17 +299,17 @@ void APU::step(Bus_obj* bus){
   channel_3_output = channel_3_handler();
   channel_4_output = channel_4_handler();
 
-  apu_sample_left = (((NR52 & 0x80) ? channel_4_output : 0) +
-                     ((NR52 & 0x40) ? channel_3_output : 0) +
-                     ((NR52 & 0x20) ? channel_2_output : 0) +
-                     ((NR52 & 0x10) ? channel_1_output : 0)) / 4;
+  apu_sample_left =  ((NR51 & 0x80) ? channel_4_output / 4 : 0) +
+                     ((NR51 & 0x40) ? channel_3_output / 4 : 0) +
+                     ((NR51 & 0x20) ? channel_2_output / 4 : 0) +
+                     ((NR51 & 0x10) ? channel_1_output / 4 : 0) ;
 
   apu_sample_left = apu_sample_left * (apu_left_volume + 1) / 8;
 
-  apu_sample_right = (((NR52 & 0x08) ? channel_4_output : 0) +
-                      ((NR52 & 0x04) ? channel_3_output : 0) +
-                      ((NR52 & 0x02) ? channel_2_output : 0) +
-                      ((NR52 & 0x01) ? channel_1_output : 0)) / 4;
+  apu_sample_right =  ((NR51 & 0x08) ? channel_4_output / 4 : 0) +
+                      ((NR51 & 0x04) ? channel_3_output / 4 : 0) +
+                      ((NR51 & 0x02) ? channel_2_output / 4 : 0) +
+                      ((NR51 & 0x01) ? channel_1_output / 4 : 0) ;
 
   apu_sample_right = apu_sample_right * (apu_right_volume + 1) / 8;
 
@@ -470,9 +443,104 @@ uint16_t APU::channel_2_handler(){
 }
 
 uint16_t APU::channel_3_handler(){
-  return 0;
+
+  uint16_t amplitude              = 0;
+  uint8_t  output_level           = (NR32 >> 5) & 0x03;
+  uint16_t frequency              = NR33 | ((NR34 & 0x07) << 8);
+  uint16_t frequency_timer_init   = (2048 - frequency) * 2;
+
+  if(!_channel_3_is_enabled) return 0;
+
+  _channel_3_timer--;
+
+  if(_channel_3_timer == 0){
+    _channel_3_current_sample = (_channel_3_current_sample + 1) % 32;
+    _channel_3_timer          = frequency_timer_init;
+  }
+
+  amplitude = WPRAM[_channel_3_current_sample / 2];
+  if(_channel_3_current_sample % 2 == 0) amplitude = (amplitude >> 4) & 0x0f;
+  else                                   amplitude =  amplitude       & 0x0f;
+
+  amplitude = (output_level == 0b00) ? 0              :
+              (output_level == 0b01) ? amplitude      :
+              (output_level == 0b10) ? amplitude >> 1 :
+                                       amplitude >> 2 ;
+
+  if(_length_step and (NR34 & 0x40)){
+    _channel_3_length_timer--;
+    if(_channel_3_length_timer == 0){
+      _channel_3_is_enabled = 0;
+    }
+  }
+
+  return amplitude * APU_AMPLITUDE_SCALING * _channel_3_dac_enabled;
+
 }
 uint16_t APU::channel_4_handler(){
   return 0;
 }
 
+void APU::reset_registers(){
+
+  NR10 = 0x80;
+  NR11 = 0xBF;
+  NR12 = 0xF3;
+  NR13 = 0xFF;
+  NR14 = 0xBF;
+
+  NR21 = 0x3F;
+  NR22 = 0x00;
+  NR23 = 0xFF;
+  NR24 = 0xBF;
+
+  NR30 = 0x7F;
+  NR31 = 0xFF;
+  NR32 = 0x9F;
+  NR33 = 0xFF;
+  NR34 = 0xBF;
+
+  NR41 = 0xFF;
+  NR42 = 0x00;
+  NR43 = 0x00;
+  NR44 = 0xFB;
+
+  NR50 = 0x77;
+  NR51 = 0xF3;
+  NR52 = 0xF1;
+
+  _previous_DIV_value = 0;
+  _current_DIV_value  = 0;
+  _frame_sequencer    = 0;
+
+  _channel_1_is_enabled = 0;
+  _channel_1_envelope_timer = 0;
+  _channel_1_volume = 0;
+  _channel_1_sweep_en = 0;
+  _channel_1_sweep_timer = 0;
+  _channel_1_shadow_frequency = 0;
+  _channel_1_frequency = 0;
+  _channel_1_timer = 0;
+  _channel_1_wave_duty_position = 0;
+  _channel_1_length_timer = 0;
+
+  _channel_2_is_enabled = 0;
+  _channel_2_envelope_timer = 0;
+  _channel_2_volume = 0;
+  _channel_2_timer = 0;
+  _channel_2_wave_duty_position = 0;
+  _channel_2_length_timer = 0;
+
+  _channel_3_is_enabled = 0;
+  _channel_3_current_sample = 0;
+  _channel_3_timer = 0;
+  _channel_3_length_timer = 0;
+  _channel_3_dac_enabled = 0;
+
+  _channel_4_is_enabled = 0;
+
+  _audio_buffer_counter               = 0;
+  _audio_buffer_downsampling_counter  = 0;
+
+  memset((void*) _audio_buffer, 0, APU_AUDIO_BUFFER_SIZE * sizeof(uint16_t));
+}

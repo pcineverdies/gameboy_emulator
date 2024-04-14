@@ -87,6 +87,10 @@ class APU : public Bus_obj {
 
   // Channel 3 internal variables
   uint8_t  _channel_3_is_enabled;
+  uint8_t  _channel_3_current_sample;
+  uint16_t _channel_3_timer;
+  uint16_t _channel_3_length_timer;
+  uint8_t  _channel_3_dac_enabled;
 
   // Channel 4 internal variables
   uint8_t  _channel_4_is_enabled;
@@ -99,6 +103,7 @@ class APU : public Bus_obj {
   uint16_t channel_2_handler();
   uint16_t channel_3_handler();
   uint16_t channel_4_handler();
+  void     reset_registers();
 
 public:
 
