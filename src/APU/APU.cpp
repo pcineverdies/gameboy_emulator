@@ -56,58 +56,58 @@ uint8_t APU::read(uint16_t addr){
     res = WPRAM[addr - APU_WPRAM_INIT_ADDR];
   }
   else if(addr == APU_NR10_ADDR){
-    res = NR10;
+    res = NR10 | 0x80;
   }
   else if(addr == APU_NR11_ADDR){
-    res = NR11;
+    res = NR11 | 0x3F;
   }
   else if(addr == APU_NR12_ADDR){
-    res = NR12;
+    res = NR12 | 0x00;
   }
   else if(addr == APU_NR13_ADDR){
-    res = NR13;
+    res = NR13 | 0xFF;
   }
   else if(addr == APU_NR14_ADDR){
-    res = NR14;
+    res = NR14 | 0xBF;
   }
   else if(addr == APU_NR21_ADDR){
-    res = NR21;
+    res = NR21 | 0x3F;
   }
   else if(addr == APU_NR22_ADDR){
-    res = NR22;
+    res = NR22 | 0x00;
   }
   else if(addr == APU_NR23_ADDR){
-    res = NR23;
+    res = NR23 | 0xFF;
   }
   else if(addr == APU_NR24_ADDR){
-    res = NR24;
+    res = NR24 | 0xBF;
   }
   else if(addr == APU_NR30_ADDR){
-    res = NR30;
+    res = NR30 | 0x7F;
   }
   else if(addr == APU_NR31_ADDR){
-    res = NR31;
+    res = NR31 | 0xFF;
   }
   else if(addr == APU_NR32_ADDR){
-    res = NR32;
+    res = NR32 | 0x9F;
   }
   else if(addr == APU_NR33_ADDR){
-    res = NR33;
+    res = NR33 | 0xFF;
   }
   else if(addr == APU_NR34_ADDR){
-    res = NR34;
+    res = NR34 | 0xBF;
   }
   else if(addr == APU_NR41_ADDR){
-    res = NR41;
+    res = NR41 | 0xFF;
   }
   else if(addr == APU_NR42_ADDR){
-    res = NR42;
+    res = NR42 | 0x00;
   }
   else if(addr == APU_NR43_ADDR){
-    res = NR43;
+    res = NR43 | 0x00;
   }
   else if(addr == APU_NR44_ADDR){
-    res = NR44;
+    res = NR44 | 0xBF;
   }
   else if(addr == APU_NR50_ADDR){
     res = NR50;
@@ -116,10 +116,10 @@ uint8_t APU::read(uint16_t addr){
     res = NR51;
   }
   else if(addr == APU_NR52_ADDR){
-    res = NR52;
+    res = NR52 | 0x70;
   }
   else{
-    std::invalid_argument("Incorrect address for APU\n");
+    res = 0xFF;
   }
 
   return res;
@@ -141,14 +141,38 @@ void APU::write(uint16_t addr, uint8_t data){
   // Only bit 7 can be modified, while the msbs are read-only
   if(addr == APU_NR52_ADDR){
     if(data & 0x80){
-      data = (NR52 | 0x80);
+      NR52 = (NR52 | 0x80);
     }
     else{
-      data = (NR52 & 0x7F);
       reset_registers();
+      NR52 = 0;
+      NR10 = 0;
+      NR11 = 0;
+      NR12 = 0;
+      NR13 = 0;
+      NR14 = 0;
+      NR21 = 0;
+      NR22 = 0;
+      NR23 = 0;
+      NR24 = 0;
+      NR30 = 0;
+      NR31 = 0;
+      NR32 = 0;
+      NR33 = 0;
+      NR34 = 0;
+      NR41 = 0;
+      NR42 = 0;
+      NR43 = 0;
+      NR44 = 0;
+      NR50 = 0;
+      NR51 = 0;
+      NR52 = 0;
     }
     return;
   }
+
+  // If the APU is off, all the registers are read-only
+  else if((NR52 & 0x80) == 0) return;
 
   // In non-CGB consoles, the length registers
   // are always writable, also when the APU is off.
@@ -165,9 +189,6 @@ void APU::write(uint16_t addr, uint8_t data){
     NR41 = data | 0b11000000;
   }
 
-  // If the APU is off, all the registers are read-only
-  else if((NR52 & 0x80) == 0) return;
-
   else if(addr >= APU_WPRAM_INIT_ADDR and addr <= APU_WPRAM_END_ADDR){
     WPRAM[addr - APU_WPRAM_INIT_ADDR] = data;
   }
@@ -176,9 +197,7 @@ void APU::write(uint16_t addr, uint8_t data){
   }
   else if(addr == APU_NR12_ADDR){
     NR12 = data;
-    if((data & 0xF8) == 0){
-      _channel_1_is_enabled = 0;
-    }
+    if((data & 0xF8) == 0) _channel_1_is_enabled = 0;
   }
   else if(addr == APU_NR13_ADDR){
     NR13 = data;
@@ -202,10 +221,7 @@ void APU::write(uint16_t addr, uint8_t data){
   }
   else if(addr == APU_NR22_ADDR){
     NR22 = data;
-    // ADC off
-    if((data & 0xF8) == 0){
-      _channel_2_is_enabled = 0;
-    }
+    if((data & 0xF8) == 0) _channel_2_is_enabled = 0;
   }
   else if(addr == APU_NR23_ADDR){
     NR23 = data;
@@ -250,6 +266,7 @@ void APU::write(uint16_t addr, uint8_t data){
   }
   else if(addr == APU_NR42_ADDR){
     NR42 = data;
+    if((data & 0xF8) == 0) _channel_4_is_enabled = 0;
   }
   else if(addr == APU_NR43_ADDR){
     NR43 = data;
@@ -268,7 +285,7 @@ void APU::write(uint16_t addr, uint8_t data){
     }
   }
   else if(addr == APU_NR50_ADDR){
-    NR50 = (data & 0x77);
+    NR50 = data;
   }
   else if(addr == APU_NR51_ADDR){
     NR51 = data;
@@ -661,8 +678,8 @@ void APU::reset_registers(){
   NR52 = 0xF1;
 
   _previous_DIV_value = 0;
-  _current_DIV_value  = 0;
-  _frame_sequencer    = 0;
+  _current_DIV_value = 0;
+  _frame_sequencer = 0;
 
   _channel_1_is_enabled = 0;
   _channel_1_envelope_timer = 0;
