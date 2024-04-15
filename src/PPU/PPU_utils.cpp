@@ -257,10 +257,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
     lower_tile = bus->read(tile_address);
     upper_tile = bus->read(tile_address + 1);
 
-
     // No pixel scrolling for window. Since pixels are displayed from left to
     // right, we must consider elements from left to right as well.
-    mask = (using_window) ? 1 << (7 - (x % 8)) : 1 << (7 - ((x + SCX) % 8));
+    mask = (using_window) ? 1 << (7 - ((x - WX + 7) % 8)) : 1 << (7 - ((x + SCX) % 8));
 
     // Extract color to use
     color_id_to_use = 0;
@@ -310,10 +309,6 @@ void PPU::DRAWING_step(Bus_obj* bus){
       // priority is 1 and id of the background was different from 0: skip object
       if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
 
-      // an object with lower x coordinate was already drawn: skip object
-      if(last_x_coordinate <= obj_x_pos) continue;
-      else last_x_coordinate = obj_x_pos;
-
       // Tile map is always fixed for sprites
       tile_address = PPU_TILES_MAP_1;
 
@@ -344,6 +339,10 @@ void PPU::DRAWING_step(Bus_obj* bus){
       color_id_to_use = 0;
       if(lower_tile & mask) color_id_to_use |= 0x01;
       if(upper_tile & mask) color_id_to_use |= 0x02;
+
+      // an object with lower x coordinate was already drawn: skip object
+      if(last_x_coordinate <= obj_x_pos or color_id_to_use == 0) continue;
+      else last_x_coordinate = obj_x_pos;
 
       // Extract color to use
       palette_to_use = (obj_flags & PPU_SPRITE_PALETTE_NUMBER_MASK) ? OBP1 : OBP0;

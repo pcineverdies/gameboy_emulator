@@ -312,52 +312,54 @@ void APU::step(Bus_obj* bus){
   uint8_t  apu_left_volume  = (NR50 >> 4) & 0x07;
   uint8_t  apu_right_volume = (NR50     ) & 0x07;
 
-  // Disable APU
-  if((NR52 & 0x80) == 0) return;
+  // If APU is disabled, skip the computation of current samples and provide
+  // 0 as values. The audio cannot be skipped in order to mantain stable the framerate
+  if((NR52 & 0x80) != 0){
 
-  // Frame sequencer handler using timer DIV register
-  _current_DIV_value = bus->read(MMU_TIMER_INIT_ADDR);
+    // Frame sequencer handler using timer DIV register
+    _current_DIV_value = bus->read(MMU_TIMER_INIT_ADDR);
 
-  // Compute steps of sweep, envelope and length functions, with resepct to a
-  // falling edge of bit 5 of DIV.
-  // -> Envlope is updated with 1/8 of frequency
-  // -> Length  is updated with 1/2 of frequency
-  // -> Sweep   is updated with 1/4 of frequency
-  _envelope_step = 0;
-  _sweep_step = 0;
-  _length_step = 0;
+    // Compute steps of sweep, envelope and length functions, with resepct to a
+    // falling edge of bit 5 of DIV.
+    // -> Envlope is updated with 1/8 of frequency
+    // -> Length  is updated with 1/2 of frequency
+    // -> Sweep   is updated with 1/4 of frequency
+    _envelope_step = 0;
+    _sweep_step = 0;
+    _length_step = 0;
 
-  if((_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5))){
-    _frame_sequencer++;
-    _length_step   = ((_frame_sequencer % 2) == 0) ? 1 : 0;
-    _sweep_step    = ((_frame_sequencer % 4) == 0) ? 1 : 0;
-    _envelope_step = ((_frame_sequencer % 8) == 0) ? 1 : 0;
+    if((_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5))){
+      _frame_sequencer++;
+      _length_step   = ((_frame_sequencer % 2) == 0) ? 1 : 0;
+      _sweep_step    = ((_frame_sequencer % 4) == 0) ? 1 : 0;
+      _envelope_step = ((_frame_sequencer % 8) == 0) ? 1 : 0;
+    }
+
+    // Store previous DIV value for next iteration
+    _previous_DIV_value = _current_DIV_value;
+
+    // Get channels outputs
+    channel_1_output = channel_1_handler();
+    channel_2_output = channel_2_handler();
+    channel_3_output = channel_3_handler();
+    channel_4_output = channel_4_handler();
+
+    // Sound panning left with volume
+    apu_sample_left =  ((NR51 & 0x80) ? channel_4_output / 4 : 0) +
+                       ((NR51 & 0x40) ? channel_3_output / 4 : 0) +
+                       ((NR51 & 0x20) ? channel_2_output / 4 : 0) +
+                       ((NR51 & 0x10) ? channel_1_output / 4 : 0) ;
+
+    apu_sample_left = apu_sample_left * (apu_left_volume + 1) / 8;
+
+    // Sound panning right with volume
+    apu_sample_right =  ((NR51 & 0x08) ? channel_4_output / 4 : 0) +
+                        ((NR51 & 0x04) ? channel_3_output / 4 : 0) +
+                        ((NR51 & 0x02) ? channel_2_output / 4 : 0) +
+                        ((NR51 & 0x01) ? channel_1_output / 4 : 0) ;
+
+    apu_sample_right = apu_sample_right * (apu_right_volume + 1) / 8;
   }
-
-  // Store previous DIV value for next iteration
-  _previous_DIV_value = _current_DIV_value;
-
-  // Get channels outputs
-  channel_1_output = channel_1_handler();
-  channel_2_output = channel_2_handler();
-  channel_3_output = channel_3_handler();
-  channel_4_output = channel_4_handler();
-
-  // Sound panning left with volume
-  apu_sample_left =  ((NR51 & 0x80) ? channel_4_output / 4 : 0) +
-                     ((NR51 & 0x40) ? channel_3_output / 4 : 0) +
-                     ((NR51 & 0x20) ? channel_2_output / 4 : 0) +
-                     ((NR51 & 0x10) ? channel_1_output / 4 : 0) ;
-
-  apu_sample_left = apu_sample_left * (apu_left_volume + 1) / 8;
-
-  // Sound panning right with volume
-  apu_sample_right =  ((NR51 & 0x08) ? channel_4_output / 4 : 0) +
-                      ((NR51 & 0x04) ? channel_3_output / 4 : 0) +
-                      ((NR51 & 0x02) ? channel_2_output / 4 : 0) +
-                      ((NR51 & 0x01) ? channel_1_output / 4 : 0) ;
-
-  apu_sample_right = apu_sample_right * (apu_right_volume + 1) / 8;
 
   // Downsampling: use one sample each APU_BUS_FREQUENCY / APU_DSP_FREQUENCY
   _audio_buffer_downsampling_counter += APU_DSP_FREQUENCY;
