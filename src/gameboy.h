@@ -12,6 +12,7 @@
 #include "IO/joypad.h"
 #include "memory/cartridge.h"
 #include "PPU/PPU.h"
+#include "utils/gb_global_t.h"
 #include <string>
 
 #define BUS_FREQUENCY     4194304

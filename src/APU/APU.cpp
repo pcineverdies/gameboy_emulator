@@ -1,5 +1,7 @@
 #include "APU.h"
 
+extern struct gb_global_t gb_global;
+
 /** APU::APU
     APU constructor
 
@@ -367,8 +369,8 @@ void APU::step(Bus_obj* bus){
     _audio_buffer_downsampling_counter -= APU_BUS_FREQUENCY;
 
     // Store samples in the buffer using LR order
-    _audio_buffer[_audio_buffer_counter++] = apu_sample_left;
-    _audio_buffer[_audio_buffer_counter++] = apu_sample_right;
+    _audio_buffer[_audio_buffer_counter++] = apu_sample_left  * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
+    _audio_buffer[_audio_buffer_counter++] = apu_sample_right * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
 
     // When the buffer is full, send the samples to the speaker functino
     if(_audio_buffer_counter == APU_AUDIO_BUFFER_SIZE){
@@ -437,7 +439,7 @@ uint16_t APU::channel_1_handler(){
   }
 
   // Compute current amplitude for the channel
-  amplitude = _wave_duty_table[duty_cycle][_channel_1_wave_duty_position] * APU_AMPLITUDE_SCALING;
+  amplitude = _wave_duty_table[duty_cycle][_channel_1_wave_duty_position];
 
   // Stop timer when length timer expires
   if(_length_step and (NR14 & 0x40)){
@@ -514,7 +516,7 @@ uint16_t APU::channel_2_handler(){
   }
 
   // Compute current amplitude for the channel
-  amplitude = _wave_duty_table[duty_cycle][_channel_2_wave_duty_position] * APU_AMPLITUDE_SCALING;
+  amplitude = _wave_duty_table[duty_cycle][_channel_2_wave_duty_position];
 
   // Stop timer when length timer expires
   if(_length_step and (NR24 & 0x40)){
@@ -583,7 +585,7 @@ uint16_t APU::channel_3_handler(){
   }
 
   // Return 0 if DAC is disabled
-  return amplitude * APU_AMPLITUDE_SCALING * _channel_3_dac_enabled;
+  return amplitude * _channel_3_dac_enabled;
 
 }
 /** APU::channel_4_handler
@@ -622,7 +624,7 @@ uint16_t APU::channel_4_handler(){
   }
 
   // LSB of the LSFR corresponds to the amplitude to use
-  amplitude = (_channel_4_LSFR & 1) * APU_AMPLITUDE_SCALING;
+  amplitude = (_channel_4_LSFR & 1);
 
   // Stop timer when length timer expires
   if(_length_step and (NR44 & 0x40)){

@@ -6,7 +6,12 @@
 #include <cstdint>
 #include <string>
 #include <SDL2/SDL.h>
+#include "../utils/gb_global_t.h"
 #include <stdexcept>
+
+#define JOYPAD_VOLUME_DEBOUNCING_DELAY 400
+#define JOYPAD_MAX_VOLUME 10
+#define JOYPAD_MIN_VOLUME 0
 
 #define JOYPAD_SB_MASK (1 << 5)
 #define JOYPAD_DP_MASK (1 << 4)
@@ -32,6 +37,8 @@
 #define JOYPAD_RIGHT_BUTTON   SDL_SCANCODE_D
 #define JOYPAD_LEFT_BUTTON    SDL_SCANCODE_A
 #define JOYPAD_QUIT_BUTTON    SDL_SCANCODE_Q
+#define JOYPAD_VOLUME_UP_BUTTON   SDL_SCANCODE_P
+#define JOYPAD_VOLUME_DOWN_BUTTON SDL_SCANCODE_O
 
 class Joypad : public Bus_obj {
 

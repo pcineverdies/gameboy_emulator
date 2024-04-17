@@ -2,6 +2,8 @@
 #include <iostream>
 #include <filesystem>
 
+extern gb_global_t gb_global;
+
 /** Cartridge::read
     Read a data from a cartridge, referring to different
     methods depending on the type of used cartridge.
@@ -200,7 +202,7 @@ void Cartridge::save_data_ram(){
   _ram_access_counter = 0;
 
   #ifdef __DEBUG
-  printf("Content of RAM is being saved...\n");
+  // printf("Content of RAM is being saved...\n");
   #endif
 
   if(stream.is_open()){

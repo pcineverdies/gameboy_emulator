@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include "../memory/memory_map.h"
 #include "../memory/cartridge.h"
+#include "../utils/gb_global_t.h"
 
 class PPU : public Bus_obj {
 

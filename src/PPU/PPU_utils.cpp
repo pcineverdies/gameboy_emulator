@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 
+extern gb_global_t gb_global;
 
 /** PPU::reset
     Sets the initial values of the PPU registers

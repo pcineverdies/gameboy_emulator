@@ -8,6 +8,7 @@
 #include <fstream>
 #include "../bus/bus_obj.h"
 #include "memory_map.h"
+#include "../utils/gb_global_t.h"
 #include "../memory/memory.h"
 
 // How many writings to perform on cartidge ram

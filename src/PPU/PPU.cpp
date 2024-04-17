@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+extern struct gb_global global_vars;
+
 /** PPU::PPU
     PPU constructor
 

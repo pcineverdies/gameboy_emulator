@@ -1,5 +1,11 @@
 #include "gameboy.h"
 
+/*
+ * This variable will be used by all the components to know
+ * whether we are in CGB mode or in compatibility mode ("Non CGB")
+ * */
+struct gb_global_t gb_global;
+
 /** Gameboy::Gameboy
     Constructor of the class. It creates and initialize all the objects which will
     be connected to the main bus; it sets the addresses with the respect to the mmu
@@ -67,6 +73,9 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
   // Add reference to the cartridge
   this->ppu->cart = this->cart;
+
+  gb_global.volume_amplification = 10;
+  gb_global.exit_request = 0;
 }
 
 /** Gameboy::run
@@ -74,8 +83,10 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
 */
 void Gameboy::run(){
-  while(1)
+  while(1){
     this->bus->step(bus);
+    if(gb_global.exit_request) break;
+  }
 }
 
 /** Gameboy::~Gameboy
