@@ -10,6 +10,7 @@
     @return uint8_t read byte
 */
 uint8_t Cartridge::read(uint16_t addr){
+  uint8_t vram_bank_to_use;
 
   // Use the content of BROM_EN to know whether the BOOT ROM
   // should be used or not.
@@ -19,7 +20,9 @@ uint8_t Cartridge::read(uint16_t addr){
   }
 
   if(addr >= VRAM_INIT_ADDR and addr < VRAM_END_ADDR){
-    return _VRAM[addr - VRAM_INIT_ADDR];
+    vram_bank_to_use = _bus_to_read->read(MMU_VBK_REG_INIT_ADDR) & 1;
+    if(!vram_bank_to_use) return _VRAM_0[addr - VRAM_INIT_ADDR];
+    else                  return _VRAM_1[addr - VRAM_INIT_ADDR];
   }
 
   if     (MBC == MBC_ROM_ONLY)                    return rom_only_read(addr);
@@ -40,9 +43,12 @@ uint8_t Cartridge::read(uint16_t addr){
     @param data uint8_t  byte to write
 */
 void Cartridge::write(uint16_t addr, uint8_t data){
+  uint8_t vram_bank_to_use;
 
   if(addr >= VRAM_INIT_ADDR and addr < VRAM_END_ADDR){
-    _VRAM[addr - VRAM_INIT_ADDR] = data;
+    vram_bank_to_use = _bus_to_read->read(MMU_VBK_REG_INIT_ADDR) & 1;
+    if(!vram_bank_to_use) _VRAM_0[addr - VRAM_INIT_ADDR] = data;
+    else                  _VRAM_1[addr - VRAM_INIT_ADDR] = data;
     return;
   }
 
@@ -64,7 +70,8 @@ void Cartridge::write(uint16_t addr, uint8_t data){
 
 */
 Cartridge::Cartridge(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
-  _VRAM.resize(RAM_SIZE);
+  _VRAM_0.resize(RAM_SIZE);
+  _VRAM_1.resize(RAM_SIZE);
   _is_ram_enabled = 0;
   _banking_mode = 0;
   _current_rom = 1;
@@ -247,4 +254,32 @@ void Cartridge::reset_save_data_ram(){
     throw std::invalid_argument("Save file " + this->name + " not opened correctly.");
   }
 
+}
+
+/** Cartridge::read_vram
+    Read a data from a vram, referring to different
+    banks depending on the first argument. This function is necessary
+    as the VRAM should be able to access VRAM independently from
+    the read function of the cartridge (VRAM is in the address space of
+    the cartridge).
+
+    @param bank uint8_t bank to use
+    @param addr uint16_t address to read
+    @return uint8_t read byte
+*/
+uint8_t Cartridge::read_vram(uint8_t bank, uint16_t addr){
+
+  uint8_t res = 0;
+
+  if(bank != 0 and bank != 1)
+    throw std::invalid_argument("Incorrect VRAM bank selected");
+
+  if(addr >= VRAM_INIT_ADDR and addr < VRAM_END_ADDR){
+    if(bank == 0) res = _VRAM_0[addr - VRAM_INIT_ADDR];
+    else          res = _VRAM_1[addr - VRAM_INIT_ADDR];
+  }
+  else
+    throw std::invalid_argument("Incorrect VRAM address used");
+
+  return res;
 }

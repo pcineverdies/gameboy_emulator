@@ -15,18 +15,20 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus = new Bus("BUS", 0, 0xFFFF, BUS_FREQUENCY);
 
   // Create all the components to be attached to the bus
-  this->cart = new Cartridge(   "CART",    MMU_CART_INIT_ADDR,   MMU_CART_SIZE       );
-  this->wram = new Memory(      "WRAM",    MMU_WRAM_INIT_ADDR,   MMU_WRAM_SIZE       );
-  this->oam = new Memory(       "OAM",     MMU_OAM_INIT_ADDR,    MMU_OAM_SIZE        );
-  this->joypad = new Joypad(    "JOYPAD",  MMU_JOYPAD_INIT_ADDR                      );
-  this->serial = new Serial(    "SERIAL",  MMU_SERIAL_INIT_ADDR                      );
-  this->timer = new Timer(      "TIMER",   MMU_TIMER_INIT_ADDR                       );
-  this->ppu = new PPU(          "PPU",     MMU_PPU_INIT_ADDR                         );
-  this->apu = new APU(          "APU",     MMU_APU_INIT_ADDR                         );
-  this->brom_en = new Register( "BROM_EN", MMU_BROM_EN_INIT_ADDR, MMU_BROM_EN_SIZE   );
-  this->hram = new Memory(      "HRAM",    MMU_HRAM_INIT_ADDR,    MMU_HRAM_SIZE      );
-  this->ie_ref = new Register(  "IE_REG",  MMU_IE_REG_INIT_ADDR,  MMU_IE_REG_SIZE, MMU_IE_REG_INIT_VAL );
-  this->if_reg = new Register(  "IF_REG",  MMU_IF_REG_INIT_ADDR,  MMU_IF_REG_SIZE, MMU_IF_REG_INIT_VAL );
+  this->cart = new Cartridge(     "CART",       MMU_CART_INIT_ADDR,       MMU_CART_SIZE                             );
+  this->wram = new WRAM(          "WRAM",       MMU_WRAM_INIT_ADDR,       MMU_WRAM_SIZE                             );
+  this->oam = new Memory(         "OAM",        MMU_OAM_INIT_ADDR,        MMU_OAM_SIZE                              );
+  this->joypad = new Joypad(      "JOYPAD",     MMU_JOYPAD_INIT_ADDR                                                );
+  this->serial = new Serial(      "SERIAL",     MMU_SERIAL_INIT_ADDR                                                );
+  this->timer = new Timer(        "TIMER",      MMU_TIMER_INIT_ADDR                                                 );
+  this->ppu = new PPU(            "PPU",        MMU_PPU_INIT_ADDR                                                   );
+  this->apu = new APU(            "APU",        MMU_APU_INIT_ADDR                                                   );
+  this->brom_en = new Register(   "BROM_EN",    MMU_BROM_EN_INIT_ADDR,    MMU_BROM_EN_SIZE                          );
+  this->hram = new Memory(        "HRAM",       MMU_HRAM_INIT_ADDR,       MMU_HRAM_SIZE                             );
+  this->ie_reg = new Register(    "IE_REG",     MMU_IE_REG_INIT_ADDR,     MMU_IE_REG_SIZE,    MMU_IE_REG_INIT_VAL   );
+  this->if_reg = new Register(    "IF_REG",     MMU_IF_REG_INIT_ADDR,     MMU_IF_REG_SIZE,    MMU_IF_REG_INIT_VAL   );
+  this->svbk_reg = new Register(  "SVBK_REG",   MMU_SVBK_REG_INIT_ADDR,   MMU_SVBK_REG_SIZE,  MMU_SVBK_REG_INIT_VAL );
+  this->vbk_reg = new Register(   "VBK_REG",    MMU_VBK_REG_INIT_ADDR,    MMU_VBK_REG_SIZE,   MMU_VBK_REG_INIT_VAL  );
 
   this->cpu = new Cpu("CPU", CPU_FREQUENCY);
 
@@ -53,12 +55,18 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus->add_to_bus(this->if_reg);
   this->bus->add_to_bus(this->brom_en);
   this->bus->add_to_bus(this->hram);
-  this->bus->add_to_bus(this->ie_ref);
+  this->bus->add_to_bus(this->ie_reg);
+  this->bus->add_to_bus(this->svbk_reg);
+  this->bus->add_to_bus(this->vbk_reg);
   this->bus->add_to_bus(this->cpu);
 
   // Add reference to the bus for specific components which
   // require out-of-step reading/writing
   this->cart->_bus_to_read = bus;
+  this->wram->_bus_to_read = bus;
+
+  // Add reference to the cartridge
+  this->ppu->cart = this->cart;
 }
 
 /** Gameboy::run
@@ -86,6 +94,8 @@ Gameboy::~Gameboy(){
   delete this->ppu;
   delete this->brom_en;
   delete this->hram;
-  delete this->ie_ref;
+  delete this->ie_reg;
   delete this->cpu;
+  delete this->svbk_reg;
+  delete this->vbk_reg;
 }

@@ -254,8 +254,8 @@ void PPU::DRAWING_step(Bus_obj* bus){
                     2 * ((LY + SCY) % 8);
 
     // Get the two tiles
-    lower_tile = bus->read(tile_address);
-    upper_tile = bus->read(tile_address + 1);
+    lower_tile = cart->read_vram(0, tile_address);
+    upper_tile = cart->read_vram(0, tile_address + 1);
 
     // No pixel scrolling for window. Since pixels are displayed from left to
     // right, we must consider elements from left to right as well.
@@ -329,8 +329,8 @@ void PPU::DRAWING_step(Bus_obj* bus){
         tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ( 15 - (LY - obj_y_pos + 16));
 
       // Get tile
-      lower_tile = bus->read(tile_address);
-      upper_tile = bus->read(tile_address + 1);
+      lower_tile = cart->read_vram(0, tile_address);
+      upper_tile = cart->read_vram(0, tile_address + 1);
 
       // Handle X flip
       mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x - obj_x_pos + 8)  : 1 << (7 - (x - obj_x_pos + 8));

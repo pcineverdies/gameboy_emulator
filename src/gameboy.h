@@ -4,6 +4,7 @@
 #include "bus/bus.h"
 #include "cpu/cpu.h"
 #include "memory/memory.h"
+#include "memory/WRAM.h"
 #include "memory/register.h"
 #include "IO/timer.h"
 #include "IO/serial.h"
@@ -22,7 +23,7 @@ class Gameboy{
 
   Bus*        bus;
   Cartridge*  cart;
-  Memory*     wram;
+  WRAM*       wram;
   Memory*     oam;
   Joypad*     joypad;
   Serial*     serial;
@@ -32,7 +33,9 @@ class Gameboy{
   APU*        apu;
   Register*   brom_en;
   Memory*     hram;
-  Register*   ie_ref;
+  Register*   ie_reg;
+  Register*   svbk_reg;
+  Register*   vbk_reg;
   Cpu*        cpu;
 
 public:
