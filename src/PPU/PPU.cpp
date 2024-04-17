@@ -89,7 +89,7 @@ void PPU::write(uint16_t addr, uint8_t data){
 void PPU::step(Bus_obj* bus){
 
   if(!is_PPU_on()){
-    display->clear(0xffffffff);
+    display->clear(PPU_PALETTE_WHITE);
 
     // Reset status of PPU when LCD is off. In the correct PPU
     // timing, the first frame after boot should be discarded

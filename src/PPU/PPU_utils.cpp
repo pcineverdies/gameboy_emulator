@@ -180,9 +180,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // Id of the color which will be used
   uint8_t color_id_to_use;
 
-  // RRGGBBAA representation of the displayed color, computer through
+  // RGB555 representation of the displayed color, computed through
   // the color ID and the palette
-  uint32_t color_to_use;
+  uint16_t color_to_use;
 
   // Stores which ids have been used for the background/window
   uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
@@ -522,14 +522,15 @@ void PPU::STAT_handler(Bus_obj* bus){
 }
 
 /** PPU::get_color_from_palette
-    Given a tile and a palette, extract the RRGGBBAA format of the color
+    Given a tile and a palette, extract the RGB555 format of the color
     to be used on the screen
 
     @param tile uint8_t tile to be used
     @param palette uint8_t palette to be used
+    @return uint16_t color
 
 */
-uint32_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
+uint16_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
 
   uint8_t index = (tile == 0) ? (palette & 0b00000011)      :
                   (tile == 1) ? (palette & 0b00001100) >> 2 :

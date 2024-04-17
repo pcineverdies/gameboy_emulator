@@ -32,7 +32,7 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
     std::runtime_error("SDL_CreateWindowAndRenderer failed");
   }
 
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB555, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // Set init color
   SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0);
@@ -47,9 +47,9 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
 /** Display::update
     Given the content of the screen, updates the display
 
-    @param data uint32_t* array containig the data to update the screen
+    @param data uint16_t* array containig the data to update the screen
 */
-void Display::update(uint32_t* data){
+void Display::update(uint16_t* data){
 
   uint8_t* pixels;
   int pitch = 0;
@@ -62,7 +62,7 @@ void Display::update(uint32_t* data){
   SDL_LockTexture(texture, nullptr, (void**)&pixels, &pitch);
 
   // Copy data from the input array to the texture
-  memcpy(pixels, (void*)data, SCREEN_HEIGHT * SCREEN_WIDTH * 4);
+  memcpy(pixels, (void*)data, SCREEN_HEIGHT * SCREEN_WIDTH * sizeof(uint16_t));
 
   // Unlock, copy and render
   SDL_UnlockTexture(texture);
@@ -73,17 +73,18 @@ void Display::update(uint32_t* data){
 /** Display::clear
     Clear the whole display with the same color
 
-    @param color uint32_t color to use to clear
+    @param color uint16_t color to use to clear
 */
-void Display::clear(uint32_t color){
+void Display::clear(uint16_t color){
 
   if(last_cleared) return;
 
-  SDL_SetRenderDrawColor(this->renderer,
-                         (color >> 24) & 0xff,
-                         (color >> 16) & 0xff,
-                         (color >> 8) & 0xff,
-                         color & 0xff);
+  // Conversion from RGB555 to RGB888
+  SDL_SetRenderDrawColor( this->renderer,
+                         ((color & 0b0111110000000000) >> 10) * 8,
+                         ((color & 0b0000001111100000) >>  5) * 8,
+                         ((color & 0b0000000000011111) >>  0) * 8,
+                         0xff);
 
   for(int i = 0; i < width*scale_factor; i++){
     for(int j = 0; j < height*scale_factor; j++){
