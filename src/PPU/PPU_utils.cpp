@@ -157,7 +157,7 @@ void PPU::OAM_SCAN_step(Bus_obj* bus){
     @param bus Bus_obj* pointer to a bus to use for reading and writing
 
 */
-void PPU::DRAWING_step(Bus_obj* bus){
+void PPU::DRAWING_step(Bus_obj*){
 
   // Select which maps to use for background and window
   uint16_t background_map_address = (LCDC & PPU_LCDC_B_TILE_MAP_MASK) ? PPU_BG_MAP_1 : PPU_BG_MAP_0 ;
@@ -173,6 +173,13 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // Address of the tile to use
   uint16_t tile_address;
 
+  // CGB mode only: contains the attributes of the current
+  // tile, as read in bank 1 of VRAM
+  uint8_t tile_attributes;
+
+  // CGB mode only: which VRAM bank to use to fetch a tile
+  uint8_t vram_bank_to_use;
+
   // 16 bits of the proper line to use within the tile
   uint8_t upper_tile;
   uint8_t lower_tile;
@@ -187,6 +194,10 @@ void PPU::DRAWING_step(Bus_obj* bus){
   // Stores which ids have been used for the background/window
   uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
 
+  // Stores if a pixel was already drawn in a location. This is useful
+  // to resolve object priority in gbc mode
+  uint8_t object_pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
+
   // Bit mask
   uint8_t mask;
 
@@ -198,6 +209,9 @@ void PPU::DRAWING_step(Bus_obj* bus){
   _DRAWING_to_wait--;
 
   if(_DRAWING_to_wait != 0) return;
+
+  memset((void*)background_colors, 0, SCREEN_HEIGHT * SCREEN_WIDTH);
+  memset((void*)object_pixels,     0, SCREEN_HEIGHT * SCREEN_WIDTH);
 
   // Background and window drawing
 
@@ -235,9 +249,17 @@ void PPU::DRAWING_step(Bus_obj* bus){
                     ((LY + SCY) & 0xff) / 8;
 
     // The offset of the tile index can be obtained by x + y * 32
-    tile_number = bus->read(tile_index_y * 32 +
-                            tile_index_x +
-                            ((using_window) ? window_map_address : background_map_address));
+    tile_number = cart->read_vram(
+      VRAM_BANK_0,
+      tile_index_y * 32 + tile_index_x +
+      ((using_window) ? window_map_address : background_map_address)
+    );
+
+    tile_attributes = cart->read_vram(
+      VRAM_BANK_1,
+      tile_index_y * 32 + tile_index_x +
+      ((using_window) ? window_map_address : background_map_address)
+    );
 
     // Tile address is computed in different ways depending on LCDC
     tile_address =  ((LCDC & PPU_LCDC_T_DATA_SEL_MASK)) ? PPU_TILES_MAP_1 +              tile_number * 16 :
@@ -250,32 +272,66 @@ void PPU::DRAWING_step(Bus_obj* bus){
     //
     // Background:
     // We need to pick the row (LY + SCY) % 8
-    tile_address += (using_window) ?
-                    2 * (_DRAWING_window_line_counter % 8) :
-                    2 * ((LY + SCY) % 8);
+    //
+    // In case we are in GBC mode and Y is flippde, bytes must be
+    // fetched from the end of the tile
+
+    if(gb_global.gbc_mode and (tile_attributes & (1 << 6))){
+      tile_address += (using_window) ?
+                      (14 - 2 * (_DRAWING_window_line_counter % 8)) :
+                      (14 - 2 * ((LY + SCY) % 8));
+    }
+    else{
+      tile_address += (using_window) ?
+                      2 * (_DRAWING_window_line_counter % 8) :
+                      2 * ((LY + SCY) % 8);
+    }
 
     // Get the two tiles
-    lower_tile = cart->read_vram(0, tile_address);
-    upper_tile = cart->read_vram(0, tile_address + 1);
+    vram_bank_to_use = (gb_global.gbc_mode) ? (tile_attributes >> 3) & 1 : 0;
+    lower_tile = cart->read_vram(vram_bank_to_use, tile_address);
+    upper_tile = cart->read_vram(vram_bank_to_use, tile_address + 1);
 
-    // No pixel scrolling for window. Since pixels are displayed from left to
-    // right, we must consider elements from left to right as well.
-    mask = (using_window) ? 1 << (7 - ((x - WX + 7) % 8)) : 1 << (7 - ((x + SCX) % 8));
+    if(gb_global.gbc_mode == 0 or !(tile_attributes & (1 << 5)))
+      // No pixel scrolling for window. Since pixels are displayed from left to
+      // right, we must consider elements from left to right as well.
+      mask = (using_window) ? 1 << (7 - ((x - WX + 7) % 8)) : 1 << (7 - ((x + SCX) % 8));
+    else
+      // In this case, we are in gbc mode and x are flipped
+      mask = (using_window) ? 1 << ((x - WX + 7) % 8) : 1 << ((x + SCX) % 8);
 
-    // Extract color to use
+    // Extract color id
     color_id_to_use = 0;
     if(lower_tile & mask) color_id_to_use |= 0x01;
     if(upper_tile & mask) color_id_to_use |= 0x02;
-    color_to_use = get_color_from_palette(color_id_to_use, BGP);
 
-    // If background and window are disabled, white is displayed
-    if(!(LCDC & PPU_LCDC_BW_ENABLE_MASK)) color_to_use = PPU_PALETTE_WHITE;
+    // Extract color to use in non GBC mode
+    if(gb_global.gbc_mode == 0){
+      color_to_use = get_color_from_palette(color_id_to_use, BGP);
+    }
+    // Extract color to use in GBC mode
+    else{
+      color_to_use = cram->read_color_palette(CRAM_BG_PALETTE, tile_attributes & 0x07, color_id_to_use);
+    }
+
+    // In non-gbc mode, if background and window are disabled, white is displayed
+    if(!(LCDC & PPU_LCDC_BW_ENABLE_MASK) and gb_global.gbc_mode == 0) color_to_use = PPU_PALETTE_WHITE;
 
     // Stores color to be displayed
     _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
 
     // Stores id of the used color, in order to handle the priority of the sprites
-    background_colors[x + LY * SCREEN_WIDTH]       = color_id_to_use;
+
+    if(gb_global.gbc_mode == 0 or !(tile_attributes & (1 << 7)))
+      // Case of non gbc mode or attribute not set
+      background_colors[x + LY * SCREEN_WIDTH] = color_id_to_use;
+    else
+      // if in gbc mode and the bit 7 is set, then then we store a large value
+      // to remember that in this case background or window has priority over
+      // any object if the color_id was different from zero (the below code is still zero
+      // if the id is zero)
+      background_colors[x + LY * SCREEN_WIDTH] = color_id_to_use * 0xf;
+
   }
 
   // Objects drawing
@@ -307,9 +363,6 @@ void PPU::DRAWING_step(Bus_obj* bus){
       // object is not in the current pixel: skip object
       if(obj_x_pos > (x + 8) or (obj_x_pos + 8) <= x + 8) continue;
 
-      // priority is 1 and id of the background was different from 0: skip object
-      if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
-
       // Tile map is always fixed for sprites
       tile_address = PPU_TILES_MAP_1;
 
@@ -329,29 +382,55 @@ void PPU::DRAWING_step(Bus_obj* bus){
       else
         tile_address += (obj_tile_number & 0xfffe) * 16 + 2 * ( 15 - (LY - obj_y_pos + 16));
 
+      // Pick the correct vram bank to use
+      vram_bank_to_use = (gb_global.gbc_mode) ? (obj_flags >> 3) & 1 : 0;
+
       // Get tile
-      lower_tile = cart->read_vram(0, tile_address);
-      upper_tile = cart->read_vram(0, tile_address + 1);
+      lower_tile = cart->read_vram(vram_bank_to_use, tile_address);
+      upper_tile = cart->read_vram(vram_bank_to_use, tile_address + 1);
 
       // Handle X flip
       mask = (obj_flags & PPU_SPRITE_X_FLIP_MASK) ? 1 << (x - obj_x_pos + 8)  : 1 << (7 - (x - obj_x_pos + 8));
 
-      // Get color id to use
+      // Extract color id
       color_id_to_use = 0;
       if(lower_tile & mask) color_id_to_use |= 0x01;
       if(upper_tile & mask) color_id_to_use |= 0x02;
 
-      // an object with lower x coordinate was already drawn: skip object
-      if(last_x_coordinate <= obj_x_pos or color_id_to_use == 0) continue;
-      else last_x_coordinate = obj_x_pos;
+      // Extract color to use in non GBC mode
+      if(gb_global.gbc_mode == 0){
+        palette_to_use = (obj_flags & PPU_SPRITE_PALETTE_NUMBER_MASK) ? OBP1 : OBP0;
+        color_to_use = get_color_from_palette(color_id_to_use, palette_to_use);
+      }
+      // Extract color to use in GBC mode
+      else{
+        color_to_use = cram->read_color_palette(CRAM_OBJ_PALETTE, obj_flags & 0x07, color_id_to_use);
+      }
 
-      // Extract color to use
-      palette_to_use = (obj_flags & PPU_SPRITE_PALETTE_NUMBER_MASK) ? OBP1 : OBP0;
-      color_to_use = get_color_from_palette(color_id_to_use, palette_to_use);
+      // non-gbc mode: an object with lower x coordinate was already drawn: skip object
+      if(gb_global.gbc_mode == 0){
+        if(last_x_coordinate <= obj_x_pos or color_id_to_use == 0) continue;
+        else last_x_coordinate = obj_x_pos;
+      }
+      else{
+        if(object_pixels[x + LY * SCREEN_WIDTH] != 0) continue;
+      }
+
+      // In gbc mode, a value of 0xff is stored if the bit zero of LCDC is set. In this case,
+      // the objects always have priority over the background/window
+      if(gb_global.gbc_mode == 0 or (LCDC & PPU_LCDC_BW_ENABLE_MASK)){
+        // In gbc mode, if the value is higher than 0xf, then the background/window has priority
+        if(gb_global.gbc_mode == 1 and background_colors[x + LY * SCREEN_WIDTH] >= 0xf) continue;
+
+        // priority is 1 and id of the background was different from 0: skip object
+        if(background_colors[x + LY * SCREEN_WIDTH] != 0 and (obj_flags & PPU_SPRITE_PRIO_MASK)) continue;
+      }
 
       // Do not draw if color id is 0
-      if(color_id_to_use != 0)
-        _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
+      if(color_id_to_use != 0) _DRAWING_display_matrix[x + LY * SCREEN_WIDTH] = color_to_use;
+
+      // Store the color id of the drawn object, useful in gb_mode to determine objects priority
+      object_pixels[x + LY * SCREEN_WIDTH] = color_id_to_use;
     }
   }
 
@@ -433,10 +512,10 @@ void PPU::VBLANK_step(Bus_obj*){
     display->update(_DRAWING_display_matrix);
 
     #ifdef __DEBUG
-    // FPS counting
-    if(++counter % 60 == 0){
+    // FPS counting, each 10 seconds
+    if(++counter % (60*10) == 0){
       auto elapsed = std::chrono::system_clock::now() - start;
-      std::cout << "FPS\t" << 60*((float)(1000000000)/(elapsed.count())) << '\n';
+      std::cout << "[FPS: " << (60*10)*((float)(1000000000)/(elapsed.count())) << "\t]\n";
       start =  std::chrono::system_clock::now();
     }
     #endif

@@ -125,6 +125,21 @@ void Cartridge::init_from_file(std::string file_name){
         _rom_bank_size = (1 << (byte + 1));
       }
 
+      if(current_address == MBC_HEADER_CGB){
+        if((uint8_t)byte == 0x80 or (uint8_t)byte == 0xC0){
+          #ifdef __DEBUG
+          printf("[CGB mode on]\n");
+          #endif
+          gb_global.gbc_mode = 1;
+        }
+        else{
+          #ifdef __DEBUG
+          printf("[CGB mode off]\n");
+          #endif
+          gb_global.gbc_mode = 0;
+        }
+      }
+
       // Write the ram bank size value if address is reached
       if(current_address == RAM_SIZE_HEADER_ADDR){
         _ram_bank_size = (byte == 0) ? 0  :

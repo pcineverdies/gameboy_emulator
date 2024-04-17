@@ -20,9 +20,14 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   // Create bus
   this->bus = new Bus("BUS", 0, 0xFFFF, BUS_FREQUENCY);
 
-  // Create all the components to be attached to the bus
+  // Initialize cartridge and set cgb mode. This is important for the initialization of
+  // registers in the different components
   this->cart = new Cartridge(     "CART",       MMU_CART_INIT_ADDR,       MMU_CART_SIZE                             );
+  this->cart->init_from_file(rom_file);
+
+  // Create all the components to be attached to the bus
   this->wram = new WRAM(          "WRAM",       MMU_WRAM_INIT_ADDR,       MMU_WRAM_SIZE                             );
+  this->cram = new CRAM(          "CRAM",       MMU_CRAM_INIT_ADDR,       MMU_CRAM_SIZE                             );
   this->oam = new Memory(         "OAM",        MMU_OAM_INIT_ADDR,        MMU_OAM_SIZE                              );
   this->joypad = new Joypad(      "JOYPAD",     MMU_JOYPAD_INIT_ADDR                                                );
   this->serial = new Serial(      "SERIAL",     MMU_SERIAL_INIT_ADDR                                                );
@@ -38,9 +43,6 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
   this->cpu = new Cpu("CPU", CPU_FREQUENCY);
 
-  // Initialize cartridge
-  this->cart->init_from_file(rom_file);
-
   // Set frequency of the active components
   this->timer->set_frequency(BUS_FREQUENCY);
   this->serial->set_frequency(SERIAL_FREQUENCY);
@@ -51,6 +53,7 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   // Add components to the bus
   this->bus->add_to_bus(this->cart);
   this->bus->add_to_bus(this->wram);
+  this->bus->add_to_bus(this->cram);
   this->bus->add_to_bus(this->oam);
   this->bus->add_to_bus(this->ppu);
   if(fixed_fps)
@@ -73,6 +76,9 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
   // Add reference to the cartridge
   this->ppu->cart = this->cart;
+
+  // Add reference to the cram
+  this->ppu->cram = this->cram;
 
   gb_global.volume_amplification = 10;
   gb_global.exit_request = 0;
@@ -109,4 +115,5 @@ Gameboy::~Gameboy(){
   delete this->cpu;
   delete this->svbk_reg;
   delete this->vbk_reg;
+  delete this->cram;
 }

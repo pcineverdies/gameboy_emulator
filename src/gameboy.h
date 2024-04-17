@@ -11,6 +11,7 @@
 #include "APU/APU.h"
 #include "IO/joypad.h"
 #include "memory/cartridge.h"
+#include "memory/CRAM.h"
 #include "PPU/PPU.h"
 #include "utils/gb_global_t.h"
 #include <string>
@@ -25,6 +26,7 @@ class Gameboy{
   Bus*        bus;
   Cartridge*  cart;
   WRAM*       wram;
+  CRAM*       cram;
   Memory*     oam;
   Joypad*     joypad;
   Serial*     serial;

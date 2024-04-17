@@ -42,6 +42,7 @@
 #define RAM_BNN_INIT_ADDR 0xA000
 #define RAM_BNN_END_ADDR 0xC000
 
+#define MBC_HEADER_CGB        0x143
 #define MBC_HEADER_ADDR       0x147
 #define ROM_SIZE_HEADER_ADDR  0x148
 #define RAM_SIZE_HEADER_ADDR  0x149
@@ -94,6 +95,9 @@
 
 #define MMU_CART_INIT_ADDR      0x0000
 #define MMU_CART_SIZE           0xC000
+
+#define MMU_CRAM_INIT_ADDR      0xFF68
+#define MMU_CRAM_SIZE           0x0004
 
 #define MMU_WRAM_INIT_ADDR      0xC000
 #define MMU_WRAM_SIZE           0x2000
