@@ -79,7 +79,10 @@ void PPU::DMA_OAM_step(Bus_obj* bus){
   bus->write(dst_addr, bus->read(src_addr));
 
   // Setup next byte to transfer
-  if(_DMA_bytes_to_transfer-- != 0) _DMA_cycles_to_wait = 3;
+  if(_DMA_bytes_to_transfer-- != 0){
+    // CGB double speed has an impact on the DMA speed, making it two times as fast
+    _DMA_cycles_to_wait = (gb_global.double_speed == 1) ? 1 : 3;
+  }
 
 }
 
@@ -189,7 +192,7 @@ void PPU::DRAWING_step(Bus_obj*){
 
   // RGB555 representation of the displayed color, computed through
   // the color ID and the palette
-  uint16_t color_to_use;
+  uint32_t color_to_use;
 
   // Stores which ids have been used for the background/window
   uint8_t background_colors[SCREEN_WIDTH * SCREEN_HEIGHT];
@@ -606,10 +609,10 @@ void PPU::STAT_handler(Bus_obj* bus){
 
     @param tile uint8_t tile to be used
     @param palette uint8_t palette to be used
-    @return uint16_t color
+    @return uint32_t color
 
 */
-uint16_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
+uint32_t PPU::get_color_from_palette(uint8_t tile, uint8_t palette){
 
   uint8_t index = (tile == 0) ? (palette & 0b00000011)      :
                   (tile == 1) ? (palette & 0b00001100) >> 2 :

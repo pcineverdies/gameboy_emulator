@@ -3,6 +3,7 @@
 
 #include "../bus/bus_obj.h"
 #include "../memory/memory_map.h"
+#include "../utils/gb_global_t.h"
 #include <cstdint>
 #include <string>
 #include <stdexcept>
@@ -20,6 +21,8 @@ class Timer : public Bus_obj {
   uint8_t prev_AND_result;
   uint8_t cycles_to_interrupt;
   uint8_t interrupt_aborted;
+
+  uint8_t current_speed;
 
 public:
 

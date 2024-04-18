@@ -330,7 +330,11 @@ void APU::step(Bus_obj* bus){
     _sweep_step = 0;
     _length_step = 0;
 
-    if((_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5))){
+    if(
+      (gb_global.double_speed == 0 and (_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5)))
+      or
+      (gb_global.double_speed == 1 and (_previous_DIV_value & (1 << 6)) and !(_current_DIV_value & (1 << 6)))
+    ){
       _frame_sequencer++;
       _length_step   = ((_frame_sequencer % 2) == 0) ? 1 : 0;
       _sweep_step    = ((_frame_sequencer % 4) == 0) ? 1 : 0;

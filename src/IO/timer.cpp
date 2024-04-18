@@ -1,6 +1,8 @@
 #include "timer.h"
 #include <cstdio>
 
+extern struct gb_global_t gb_global;
+
 /** Timer::read
     Read by from the timer at a given address
 
@@ -84,6 +86,7 @@ Timer::Timer(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 4)
   prev_AND_result = 0;
   cycles_to_interrupt = 0;
   interrupt_aborted = 0;
+  current_speed = 0;
 }
 
 /** Timer::step
@@ -94,6 +97,15 @@ Timer::Timer(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 4)
 
 */
 void Timer::step(Bus_obj* bus){
+
+  if(gb_global.gbc_mode == 1 and gb_global.double_speed == 1 and current_speed == 0){
+    this->frequency *= 2;
+    current_speed = 1;
+  }
+  if(gb_global.gbc_mode == 1 and gb_global.double_speed == 0 and current_speed == 1){
+    this->frequency /= 2;
+    current_speed = 0;
+  }
 
   uint8_t bit_position;
   uint8_t bit_position_value;

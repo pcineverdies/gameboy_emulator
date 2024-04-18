@@ -1,6 +1,8 @@
 #include "cpu.h"
 #include "opcode.h"
 
+extern struct gb_global_t gb_global;
+
 /** CPU::execute_invalid
     Check whether the provided instruction is invalid
 
@@ -849,7 +851,21 @@ bool Cpu::execute_control_misc(Bus_obj* bus){
   // ============================================================================
 
   if(_opcode == STOP_OPCODE){
-    return true; // Not used in DMG
+
+    // STOP is not used in gbc mode
+    if(gb_global.gbc_mode == 0) return true;
+
+    _u8 = bus->read(MMU_KEY1_REG_INIT_ADDR);
+
+    if(_u8 & 0x01){
+      _state = State::STATE_STOP;
+      _stop_cycles_to_wait = 2050;
+
+      if(_u8 & 0x80)  bus->write(MMU_KEY1_REG_INIT_ADDR, 0x00);
+      else            bus->write(MMU_KEY1_REG_INIT_ADDR, 0x10);
+
+      return true;
+    }
   }
 
   // ============================================================================

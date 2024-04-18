@@ -77,6 +77,9 @@ CRAM::CRAM(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, 
   background_palette.resize(64);
   object_palette.resize(64);
 
+  for(auto& color : background_palette) color = 0xFF;
+  for(auto& color : object_palette) color = 0xFF;
+
   BCPS = 0;
   OCPS = 0;
 }
@@ -91,12 +94,11 @@ CRAM::CRAM(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, 
     @return uint16_t color in format RGB555
 
 */
-uint16_t CRAM::read_color_palette(uint8_t target, uint8_t palette_number, uint8_t color_number){
+uint32_t CRAM::read_color_palette(uint8_t target, uint8_t palette_number, uint8_t color_number){
   uint8_t lower_byte;
   uint8_t upper_byte;
-  uint16_t res_cpy  = 0;
   uint16_t res      = 0;
-  uint8_t counter   = 15;
+  uint8_t red, blue, green;
 
   if(target == CRAM_OBJ_PALETTE){
     lower_byte = object_palette[palette_number * 8 + color_number * 2    ];
@@ -109,14 +111,15 @@ uint16_t CRAM::read_color_palette(uint8_t target, uint8_t palette_number, uint8_
 
   // The color is in format RGB555 little-endian. We need to modify it in
   // RGB555 big-endian in order for SDL to use it
-  res_cpy = upper_byte << 8 | lower_byte;
+  res = upper_byte << 8 | lower_byte;
 
-  // Reverse order of bits in the number
-  while(counter != 0xff){
-    if(res_cpy & (1 << counter)) res |= (1 << (15 - counter));
-    counter--;
-  }
+  red   = res & 0x1F;
+  green = (res >> 5) & 0x1F;
+  blue  = (res >> 10) & 0x1F;
+  red   = (red & 1)   ? (red << 3)   | 0b111 : red << 3;
+  blue  = (blue & 1)  ? (blue << 3)  | 0b111 : blue << 3;
+  green = (green & 1) ? (green << 3) | 0b111 : green << 3;
 
-  return res >> 1;
+  return (red << 16) | (green << 8) | blue;
 }
 

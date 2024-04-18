@@ -29,6 +29,7 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->wram = new WRAM(          "WRAM",       MMU_WRAM_INIT_ADDR,       MMU_WRAM_SIZE                             );
   this->cram = new CRAM(          "CRAM",       MMU_CRAM_INIT_ADDR,       MMU_CRAM_SIZE                             );
   this->oam = new Memory(         "OAM",        MMU_OAM_INIT_ADDR,        MMU_OAM_SIZE                              );
+  this->hdma = new HDMA(          "HDMA",       MMU_HDMA_INIT_ADDR                                                  );
   this->joypad = new Joypad(      "JOYPAD",     MMU_JOYPAD_INIT_ADDR                                                );
   this->serial = new Serial(      "SERIAL",     MMU_SERIAL_INIT_ADDR                                                );
   this->timer = new Timer(        "TIMER",      MMU_TIMER_INIT_ADDR                                                 );
@@ -40,15 +41,17 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->if_reg = new Register(    "IF_REG",     MMU_IF_REG_INIT_ADDR,     MMU_IF_REG_SIZE,    MMU_IF_REG_INIT_VAL   );
   this->svbk_reg = new Register(  "SVBK_REG",   MMU_SVBK_REG_INIT_ADDR,   MMU_SVBK_REG_SIZE,  MMU_SVBK_REG_INIT_VAL );
   this->vbk_reg = new Register(   "VBK_REG",    MMU_VBK_REG_INIT_ADDR,    MMU_VBK_REG_SIZE,   MMU_VBK_REG_INIT_VAL  );
+  this->key1_reg = new Register(  "KEY1_REG",   MMU_KEY1_REG_INIT_ADDR,   MMU_KEY1_REG_SIZE,  MMU_KEY1_REG_INIT_VAL );
 
   this->cpu = new Cpu("CPU", CPU_FREQUENCY);
 
   // Set frequency of the active components
-  this->timer->set_frequency(BUS_FREQUENCY);
+  this->timer->set_frequency(TIMER_FREQUENCY);
   this->serial->set_frequency(SERIAL_FREQUENCY);
-  this->ppu->set_frequency(BUS_FREQUENCY);
+  this->ppu->set_frequency(PPU_FREQUENCY);
   this->joypad->set_frequency(JOYPAD_FREQUENCY);
-  this->apu->set_frequency(BUS_FREQUENCY);
+  this->apu->set_frequency(APU_FREQUENCY);
+  this->hdma->set_frequency(PPU_FREQUENCY);
 
   // Add components to the bus
   this->bus->add_to_bus(this->cart);
@@ -59,6 +62,8 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   if(fixed_fps)
     this->bus->add_to_bus(this->apu);
   this->bus->add_to_bus(this->timer);
+  if(gb_global.gbc_mode)
+    this->bus->add_to_bus(this->hdma);
   this->bus->add_to_bus(this->joypad);
   this->bus->add_to_bus(this->serial);
   this->bus->add_to_bus(this->if_reg);
@@ -66,6 +71,7 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus->add_to_bus(this->hram);
   this->bus->add_to_bus(this->ie_reg);
   this->bus->add_to_bus(this->svbk_reg);
+  this->bus->add_to_bus(this->key1_reg);
   this->bus->add_to_bus(this->vbk_reg);
   this->bus->add_to_bus(this->cpu);
 
@@ -80,8 +86,14 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   // Add reference to the cram
   this->ppu->cram = this->cram;
 
-  gb_global.volume_amplification = 10;
-  gb_global.exit_request = 0;
+  // Max volume on start-up
+  gb_global.volume_amplification  = 10;
+
+  // No request to exit
+  gb_global.exit_request          = 0;
+
+  // No double-speed mode
+  gb_global.double_speed          = 0;
 }
 
 /** Gameboy::run
@@ -109,11 +121,14 @@ Gameboy::~Gameboy(){
   delete this->timer;
   delete this->if_reg;
   delete this->ppu;
+  delete this->apu;
   delete this->brom_en;
   delete this->hram;
+  delete this->hdma;
   delete this->ie_reg;
   delete this->cpu;
   delete this->svbk_reg;
+  delete this->key1_reg;
   delete this->vbk_reg;
   delete this->cram;
 }

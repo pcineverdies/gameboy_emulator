@@ -109,6 +109,9 @@
 
 #define MMU_JOYPAD_INIT_ADDR    0xFF00
 
+#define MMU_HDMA_INIT_ADDR      0xFF51
+#define MMU_HDMA5_ADDR          0xFF55
+
 #define MMU_SERIAL_INIT_ADDR    0xFF01
 
 #define MMU_TIMER_INIT_ADDR     0xFF04
@@ -124,6 +127,10 @@
 #define MMU_VBK_REG_INIT_ADDR  0xFF4F
 #define MMU_VBK_REG_INIT_VAL   0xFE
 #define MMU_VBK_REG_SIZE       1
+
+#define MMU_KEY1_REG_INIT_ADDR  0xFF4D
+#define MMU_KEY1_REG_INIT_VAL   0x00
+#define MMU_KEY1_REG_SIZE       8
 
 #define MMU_PPU_INIT_ADDR       0xFF40
 #define MMU_APU_INIT_ADDR       0xFF10

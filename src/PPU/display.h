@@ -21,8 +21,8 @@ class Display {
 
 public:
         Display(uint8_t, uint8_t, uint8_t);
-  void  update(uint16_t*);
-  void  clear(uint16_t);
+  void  update(uint32_t*);
+  void  clear(uint32_t);
         ~Display();
 };
 

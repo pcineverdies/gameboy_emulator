@@ -20,6 +20,9 @@ struct gb_global_t{
   // After pressing a button, this terminates the execution of the GB,
   // allowing all the objects to be deallocated correctly
   uint8_t exit_request;
+
+  // Double_speed mode of the system
+  uint8_t double_speed;
 };
 
 #endif // __GB_GLOBAL_T_H

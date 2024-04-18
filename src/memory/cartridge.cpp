@@ -78,7 +78,7 @@ Cartridge::Cartridge(std::string name, uint16_t init_addr, uint16_t size) : Bus_
   _banking_mode = 0;
   _current_rom = 1;
   _RTC_to_latch = 0;
-  _using_boot_rom = 1;
+  _using_boot_rom = 0;
 }
 
 /** Cartridge::init_from_file
@@ -168,7 +168,8 @@ void Cartridge::init_from_file(std::string file_name){
   for(int i = 0; i < _ram_bank_size; i++)
     _ram_banks.push_back(std::vector<uint8_t>(RAM_SIZE));
 
-  set_boot_rom();
+  if(gb_global.gbc_mode == 0)
+    set_boot_rom();
   reset_save_data_ram();
 }
 
@@ -203,6 +204,7 @@ void Cartridge::set_boot_rom(){
   for(uint32_t i = 0; i < dmg_boot_rom.size(); i++)
     _BOOT_ROM[i] = dmg_boot_rom[i];
 
+  _using_boot_rom = 1;
 }
 
 /** Cartridge::save_data_ram
@@ -286,7 +288,7 @@ void Cartridge::reset_save_data_ram(){
 */
 uint8_t Cartridge::read_vram(uint8_t bank, uint16_t addr){
 
-  uint8_t res = 0;
+  uint8_t res = 0xFF;
 
   if(bank != 0 and bank != 1)
     throw std::invalid_argument("Incorrect VRAM bank selected");
@@ -295,8 +297,6 @@ uint8_t Cartridge::read_vram(uint8_t bank, uint16_t addr){
     if(bank == 0) res = _VRAM_0[addr - VRAM_INIT_ADDR];
     else          res = _VRAM_1[addr - VRAM_INIT_ADDR];
   }
-  else
-    throw std::invalid_argument("Incorrect VRAM address used");
 
   return res;
 }
