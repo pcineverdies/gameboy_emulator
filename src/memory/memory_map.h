@@ -91,7 +91,8 @@
 #define MBC_5_END    0x1E
 
 #define MMU_BOOT_INIT_ADDR      0x0000
-#define MMU_BOOT_SIZE           0x0100
+#define MMU_BOOT_DMG_SIZE       0x0100
+#define MMU_BOOT_CGB_SIZE       0x0900
 
 #define MMU_CART_INIT_ADDR      0x0000
 #define MMU_CART_SIZE           0xC000
