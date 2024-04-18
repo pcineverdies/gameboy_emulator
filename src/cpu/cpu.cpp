@@ -1,5 +1,7 @@
 #include "cpu.h"
 
+extern struct gb_global_t gb_global;
+
 /** CPU::CPU
     In charge of initializing the registers with the expected values.
 
@@ -20,7 +22,6 @@ Cpu::Cpu(std::string name, uint32_t frequency) : Bus_obj(name, 0, 0){
   registers.write_E(0xd8);
   registers.write_H(0x01);
   registers.write_L(0x4d);
-
   registers.PC = 0x0000;
   registers.SP = 0xfffe;
 
@@ -52,6 +53,29 @@ uint8_t Cpu::fetch(Bus_obj* bus){
 
 */
 void Cpu::step(Bus_obj* bus){
+
+  // The CPU cannot do anything if an HRAM transfer is being done
+  if(gb_global.gbc_mode == 1 ){
+    if(!(bus->read(MMU_HDMA5_ADDR) & 0x80)) return;
+  }
+
+  // Handle switch mode. The cpu needs to wait 2050 M-cycle in the previous
+  // speed before effectively switching. Once the cycles have passed, the
+  // frequency switches and execution proceeds as usual (while an M-cycle take 2T)
+  if(gb_global.gbc_mode == 1 and _state == State::STATE_STOP){
+    if(--_stop_cycles_to_wait == 0){
+
+      gb_global.double_speed = !gb_global.double_speed;
+      if(gb_global.double_speed == 1) this->frequency *= 2;
+      else                            this->frequency /= 2;
+      _state = State::STATE_1;
+
+      #ifdef __DEBUG
+      printf("[CPU frequency: %u]\n", this->frequency);
+      #endif
+    }
+    return;
+  }
 
   // Handle ei instruction, set IME to 1 at the beginning of
   // the second cycle after ei was used.

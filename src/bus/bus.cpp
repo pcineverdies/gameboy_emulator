@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <SDL.h>
 
+extern struct gb_global_t gb_global;
+
 /** Bus::Bus
     Constructor of the class. It just calls the parent constructor.
     By having a bus which is Bus_obj, we can have a hierarchy of buses.
@@ -142,7 +144,10 @@ void Bus::step(Bus_obj* bus){
 
   for(uint32_t i = 0; i < bus_objects.size(); i++){
 
-    obj_frequency = frequency_cache[i];
+    if(gb_global.double_speed == 0)
+      obj_frequency = frequency_cache[i];
+    else
+      obj_frequency = bus_objects[i]->get_frequency();
 
     // Cannot step asynchronous objects, such as memories
     if(obj_frequency == 0) continue;

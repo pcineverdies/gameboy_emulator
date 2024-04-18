@@ -1,5 +1,7 @@
 #include "APU.h"
 
+extern struct gb_global_t gb_global;
+
 /** APU::APU
     APU constructor
 
@@ -328,7 +330,11 @@ void APU::step(Bus_obj* bus){
     _sweep_step = 0;
     _length_step = 0;
 
-    if((_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5))){
+    if(
+      (gb_global.double_speed == 0 and (_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5)))
+      or
+      (gb_global.double_speed == 1 and (_previous_DIV_value & (1 << 6)) and !(_current_DIV_value & (1 << 6)))
+    ){
       _frame_sequencer++;
       _length_step   = ((_frame_sequencer % 2) == 0) ? 1 : 0;
       _sweep_step    = ((_frame_sequencer % 4) == 0) ? 1 : 0;
@@ -363,12 +369,12 @@ void APU::step(Bus_obj* bus){
 
   // Downsampling: use one sample each APU_BUS_FREQUENCY / APU_DSP_FREQUENCY
   _audio_buffer_downsampling_counter += APU_DSP_FREQUENCY;
-  if(_audio_buffer_downsampling_counter > APU_BUS_FREQUENCY){
+  if(_audio_buffer_downsampling_counter > APU_BUS_FREQUENCY and gb_global.fixed_fps == 1){
     _audio_buffer_downsampling_counter -= APU_BUS_FREQUENCY;
 
     // Store samples in the buffer using LR order
-    _audio_buffer[_audio_buffer_counter++] = apu_sample_left;
-    _audio_buffer[_audio_buffer_counter++] = apu_sample_right;
+    _audio_buffer[_audio_buffer_counter++] = apu_sample_left  * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
+    _audio_buffer[_audio_buffer_counter++] = apu_sample_right * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
 
     // When the buffer is full, send the samples to the speaker functino
     if(_audio_buffer_counter == APU_AUDIO_BUFFER_SIZE){
@@ -386,8 +392,8 @@ void APU::step(Bus_obj* bus){
   else                      NR52 &= 0b11111110;
   if(_channel_2_is_enabled) NR52 |= 0b00000010;
   else                      NR52 &= 0b11111101;
-  if(_channel_3_is_enabled) NR52 |= 0b00000100;
-  else                      NR52 &= 0b11111011;
+  if(_channel_3_is_enabled and _channel_3_dac_enabled) NR52 |= 0b00000100;
+  else                                                 NR52 &= 0b11111011;
   if(_channel_4_is_enabled) NR52 |= 0b00001000;
   else                      NR52 &= 0b11110111;
 
@@ -437,7 +443,7 @@ uint16_t APU::channel_1_handler(){
   }
 
   // Compute current amplitude for the channel
-  amplitude = _wave_duty_table[duty_cycle][_channel_1_wave_duty_position] * APU_AMPLITUDE_SCALING;
+  amplitude = _wave_duty_table[duty_cycle][_channel_1_wave_duty_position];
 
   // Stop timer when length timer expires
   if(_length_step and (NR14 & 0x40)){
@@ -514,7 +520,7 @@ uint16_t APU::channel_2_handler(){
   }
 
   // Compute current amplitude for the channel
-  amplitude = _wave_duty_table[duty_cycle][_channel_2_wave_duty_position] * APU_AMPLITUDE_SCALING;
+  amplitude = _wave_duty_table[duty_cycle][_channel_2_wave_duty_position];
 
   // Stop timer when length timer expires
   if(_length_step and (NR24 & 0x40)){
@@ -583,7 +589,7 @@ uint16_t APU::channel_3_handler(){
   }
 
   // Return 0 if DAC is disabled
-  return amplitude * APU_AMPLITUDE_SCALING * _channel_3_dac_enabled;
+  return amplitude * _channel_3_dac_enabled;
 
 }
 /** APU::channel_4_handler
@@ -622,7 +628,7 @@ uint16_t APU::channel_4_handler(){
   }
 
   // LSB of the LSFR corresponds to the amplitude to use
-  amplitude = (_channel_4_LSFR & 1) * APU_AMPLITUDE_SCALING;
+  amplitude = (_channel_4_LSFR & 1);
 
   // Stop timer when length timer expires
   if(_length_step and (NR44 & 0x40)){

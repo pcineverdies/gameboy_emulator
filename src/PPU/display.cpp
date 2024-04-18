@@ -32,7 +32,7 @@ Display::Display(uint8_t W, uint8_t H, uint8_t S) {
     std::runtime_error("SDL_CreateWindowAndRenderer failed");
   }
 
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // Set init color
   SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 0);
@@ -62,7 +62,7 @@ void Display::update(uint32_t* data){
   SDL_LockTexture(texture, nullptr, (void**)&pixels, &pitch);
 
   // Copy data from the input array to the texture
-  memcpy(pixels, (void*)data, SCREEN_HEIGHT * SCREEN_WIDTH * 4);
+  memcpy(pixels, (void*)data, SCREEN_HEIGHT * SCREEN_WIDTH * sizeof(uint32_t));
 
   // Unlock, copy and render
   SDL_UnlockTexture(texture);
@@ -79,11 +79,12 @@ void Display::clear(uint32_t color){
 
   if(last_cleared) return;
 
-  SDL_SetRenderDrawColor(this->renderer,
-                         (color >> 24) & 0xff,
+  // Conversion from RGB555 to RGB888
+  SDL_SetRenderDrawColor( this->renderer,
                          (color >> 16) & 0xff,
-                         (color >> 8) & 0xff,
-                         color & 0xff);
+                         (color >>  8) & 0xff,
+                         (color >>  0) & 0xff,
+                         0xff);
 
   for(int i = 0; i < width*scale_factor; i++){
     for(int j = 0; j < height*scale_factor; j++){

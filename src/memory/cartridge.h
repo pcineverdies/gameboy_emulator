@@ -8,6 +8,7 @@
 #include <fstream>
 #include "../bus/bus_obj.h"
 #include "memory_map.h"
+#include "../utils/gb_global_t.h"
 #include "../memory/memory.h"
 
 // How many writings to perform on cartidge ram
@@ -37,7 +38,8 @@ class Cartridge : public Bus_obj  {
     std::vector<std::vector<uint8_t>> _rom_banks;
     std::vector<std::vector<uint8_t>> _ram_banks;
 
-    std::vector<uint8_t> _VRAM;
+    std::vector<uint8_t> _VRAM_0;
+    std::vector<uint8_t> _VRAM_1;
     std::vector<uint8_t> _BOOT_ROM;
 
     uint8_t rom_only_read(uint16_t);
@@ -64,6 +66,7 @@ public:
   void      write(uint16_t, uint8_t);
   void      step(Bus_obj*){}
   void      init_from_file(std::string);
+  uint8_t   read_vram(uint8_t, uint16_t);
             ~Cartridge(){}
 };
 

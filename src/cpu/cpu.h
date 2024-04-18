@@ -6,6 +6,7 @@
 #include "../memory/memory_map.h"
 #include "../bus/bus.h"
 #include "../bus/bus_obj.h"
+#include "../utils/gb_global_t.h"
 #include <stdexcept>
 #include <stdio.h>
 #include <cstring>
@@ -21,7 +22,10 @@ class Cpu : public Bus_obj{
     STATE_I_2, STATE_I_3, STATE_I_4, STATE_I_5,
 
     // CB handling states
-    STATE_CB_2, STATE_CB_3, STATE_CB_4
+    STATE_CB_2, STATE_CB_3, STATE_CB_4,
+
+    // Double-speed switch state
+    STATE_STOP
   };
 
   // Registers available for the cpu
@@ -43,6 +47,7 @@ class Cpu : public Bus_obj{
   uint16_t   _u16_2;
   uint32_t   _u32;
   uint8_t    _interrupt_to_handle;
+  uint16_t   _stop_cycles_to_wait;
 
   // Fetch function
   uint8_t fetch(Bus_obj*);

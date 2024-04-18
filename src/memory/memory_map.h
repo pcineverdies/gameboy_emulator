@@ -42,6 +42,7 @@
 #define RAM_BNN_INIT_ADDR 0xA000
 #define RAM_BNN_END_ADDR 0xC000
 
+#define MBC_HEADER_CGB        0x143
 #define MBC_HEADER_ADDR       0x147
 #define ROM_SIZE_HEADER_ADDR  0x148
 #define RAM_SIZE_HEADER_ADDR  0x149
@@ -90,25 +91,57 @@
 #define MBC_5_END    0x1E
 
 #define MMU_BOOT_INIT_ADDR      0x0000
-#define MMU_BOOT_SIZE           0x0100
+#define MMU_BOOT_DMG_SIZE       0x0100
+#define MMU_BOOT_CGB_SIZE       0x0900
+
 #define MMU_CART_INIT_ADDR      0x0000
 #define MMU_CART_SIZE           0xC000
+
+#define MMU_CRAM_INIT_ADDR      0xFF68
+#define MMU_CRAM_SIZE           0x0004
+
 #define MMU_WRAM_INIT_ADDR      0xC000
 #define MMU_WRAM_SIZE           0x2000
+#define MMU_BANK_WRAM_SIZE      0x1000
+#define MMU_BANK_WRAM_NUMBER    8
+
 #define MMU_OAM_INIT_ADDR       0xFE00
 #define MMU_OAM_SIZE            0x00A0
+
 #define MMU_JOYPAD_INIT_ADDR    0xFF00
+
+#define MMU_HDMA_INIT_ADDR      0xFF51
+#define MMU_HDMA5_ADDR          0xFF55
+
 #define MMU_SERIAL_INIT_ADDR    0xFF01
+
 #define MMU_TIMER_INIT_ADDR     0xFF04
+
 #define MMU_IF_REG_INIT_ADDR    0xFF0F
 #define MMU_IF_REG_INIT_VAL     0xE1
 #define MMU_IF_REG_SIZE         5
+
+#define MMU_SVBK_REG_INIT_ADDR  0xFF70
+#define MMU_SVBK_REG_INIT_VAL   0xF8
+#define MMU_SVBK_REG_SIZE       3
+
+#define MMU_VBK_REG_INIT_ADDR  0xFF4F
+#define MMU_VBK_REG_INIT_VAL   0xFE
+#define MMU_VBK_REG_SIZE       1
+
+#define MMU_KEY1_REG_INIT_ADDR  0xFF4D
+#define MMU_KEY1_REG_INIT_VAL   0x00
+#define MMU_KEY1_REG_SIZE       8
+
 #define MMU_PPU_INIT_ADDR       0xFF40
 #define MMU_APU_INIT_ADDR       0xFF10
+
 #define MMU_BROM_EN_INIT_ADDR   0xFF50
 #define MMU_BROM_EN_SIZE        8
+
 #define MMU_HRAM_INIT_ADDR      0xFF80
 #define MMU_HRAM_SIZE           0x007F
+
 #define MMU_IE_REG_INIT_ADDR    0xFFFF
 #define MMU_IE_REG_INIT_VAL     0x00
 #define MMU_IE_REG_SIZE         5

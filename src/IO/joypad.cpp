@@ -1,6 +1,8 @@
 #include "joypad.h"
 #include <cstdint>
 
+extern struct gb_global_t gb_global;
+
 /** Joypad::read
     Read the JOYP register
 
@@ -105,9 +107,11 @@ bool Joypad::key_is_pressed(uint8_t ks) {
 bool Joypad::update_JOYP(){
 
   uint8_t activate_interrupt = 0;
+  static int volume_debouncing = 0;
 
   if(key_is_pressed(JOYPAD_QUIT_BUTTON)){
-    exit(1);
+    gb_global.exit_request = 1;
+    return 0;
   }
 
   if(!(JOYP & JOYPAD_SB_MASK)){
@@ -137,6 +141,26 @@ bool Joypad::update_JOYP(){
     if(key_is_pressed(JOYPAD_RIGHT_BUTTON)) JOYP &= (~JOYPAD_RIGHT_MASK), activate_interrupt = 1;
     else                                    JOYP |= ( JOYPAD_RIGHT_MASK);
   }
+
+  // If the buttons for the volume are checked at each step of the joypad, the volume is decreased/increased too fast
+  // volume_debouncing avoids this behavior
+  if(volume_debouncing == 0){
+    if(key_is_pressed(JOYPAD_VOLUME_UP_BUTTON)){
+      if(gb_global.volume_amplification != JOYPAD_MAX_VOLUME) gb_global.volume_amplification++;
+      volume_debouncing = JOYPAD_VOLUME_DEBOUNCING_DELAY;
+      #ifdef __DEBUG
+      printf("Current volume: %d%% \n", gb_global.volume_amplification*10);
+      #endif
+    }
+    if(key_is_pressed(JOYPAD_VOLUME_DOWN_BUTTON)){
+      if(gb_global.volume_amplification != JOYPAD_MIN_VOLUME) gb_global.volume_amplification--;
+      volume_debouncing = JOYPAD_VOLUME_DEBOUNCING_DELAY;
+      #ifdef __DEBUG
+      printf("Current volume: %d%% \n", gb_global.volume_amplification*10);
+      #endif
+    }
+  }
+  else volume_debouncing--;
 
   return activate_interrupt;
 }

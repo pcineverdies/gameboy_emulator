@@ -9,6 +9,9 @@
 #include <cstdio>
 #include <stdexcept>
 #include "../memory/memory_map.h"
+#include "../memory/cartridge.h"
+#include "../memory/CRAM.h"
+#include "../utils/gb_global_t.h"
 
 class PPU : public Bus_obj {
 
@@ -69,6 +72,9 @@ class PPU : public Bus_obj {
   uint32_t get_color_from_palette(uint8_t, uint8_t);
 
 public:
+
+  Cartridge* cart;
+  CRAM* cram;
 
   PPU(std::string, uint16_t);
   uint8_t read(uint16_t);

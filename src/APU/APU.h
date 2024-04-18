@@ -7,12 +7,13 @@
 #include <vector>
 #include <stdexcept>
 #include "../memory/memory_map.h"
+#include "../utils/gb_global_t.h"
 #include <SDL.h>
 
 #define APU_AUDIO_BUFFER_SIZE 2400
 #define APU_DSP_FREQUENCY     48000
 #define APU_BUS_FREQUENCY     4800000
-#define APU_AMPLITUDE_SCALING 1000
+#define APU_AMPLITUDE_SCALING 100
 
 class APU : public Bus_obj {
 
