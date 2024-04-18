@@ -14,30 +14,16 @@ Cpu::Cpu(std::string name, uint32_t frequency) : Bus_obj(name, 0, 0){
 
   _state = State::STATE_1;
 
-  if(gb_global.gbc_mode == 0){
-    registers.write_A(0x01);
-    registers.write_F(0xb0);
-    registers.write_B(0x00);
-    registers.write_C(0x13);
-    registers.write_D(0x00);
-    registers.write_E(0xd8);
-    registers.write_H(0x01);
-    registers.write_L(0x4d);
-    registers.PC = 0x0000;
-    registers.SP = 0xfffe;
-  }
-  else{
-    registers.write_A(0x11);
-    registers.write_F(0xb0);
-    registers.write_B(0x00);
-    registers.write_C(0x00);
-    registers.write_D(0x00);
-    registers.write_E(0x08);
-    registers.write_H(0x00);
-    registers.write_L(0x7C);
-    registers.PC = 0x0100;
-    registers.SP = 0xfffe;
-  }
+  registers.write_A(0x01);
+  registers.write_F(0xb0);
+  registers.write_B(0x00);
+  registers.write_C(0x13);
+  registers.write_D(0x00);
+  registers.write_E(0xd8);
+  registers.write_H(0x01);
+  registers.write_L(0x4d);
+  registers.PC = 0x0000;
+  registers.SP = 0xfffe;
 
   IME = 1;
   _ei_delayed = 0;
@@ -78,13 +64,14 @@ void Cpu::step(Bus_obj* bus){
   // frequency switches and execution proceeds as usual (while an M-cycle take 2T)
   if(gb_global.gbc_mode == 1 and _state == State::STATE_STOP){
     if(--_stop_cycles_to_wait == 0){
+
       gb_global.double_speed = !gb_global.double_speed;
       if(gb_global.double_speed == 1) this->frequency *= 2;
       else                            this->frequency /= 2;
       _state = State::STATE_1;
 
       #ifdef __DEBUG
-      printf("[Entering double-speed mode]\n");
+      printf("[CPU frequency: %u]\n", this->frequency);
       #endif
     }
     return;

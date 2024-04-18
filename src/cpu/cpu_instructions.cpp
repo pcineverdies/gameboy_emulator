@@ -862,7 +862,7 @@ bool Cpu::execute_control_misc(Bus_obj* bus){
       _stop_cycles_to_wait = 2050;
 
       if(_u8 & 0x80)  bus->write(MMU_KEY1_REG_INIT_ADDR, 0x00);
-      else            bus->write(MMU_KEY1_REG_INIT_ADDR, 0x10);
+      else            bus->write(MMU_KEY1_REG_INIT_ADDR, 0x80);
 
       return true;
     }

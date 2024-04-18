@@ -26,6 +26,7 @@ class HDMA : public Bus_obj {
   uint16_t _cycles_to_wait;
   uint16_t _destination_address;
   uint16_t _source_address;
+  uint8_t  _hblank_to_do;
 
 public:
 

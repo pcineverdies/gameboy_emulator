@@ -3,7 +3,7 @@
 
 #define SCREEN_WIDTH  160
 #define SCREEN_HEIGHT 144
-#define SCALE_FACTOR  2
+#define SCALE_FACTOR  3
 
 #define PPU_SIZE 10
 

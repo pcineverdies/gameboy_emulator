@@ -23,6 +23,9 @@ struct gb_global_t{
 
   // Double_speed mode of the system
   uint8_t double_speed;
+
+  // Whether the fps should be fixed or not
+  uint8_t fixed_fps;
 };
 
 #endif // __GB_GLOBAL_T_H

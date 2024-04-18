@@ -369,7 +369,7 @@ void APU::step(Bus_obj* bus){
 
   // Downsampling: use one sample each APU_BUS_FREQUENCY / APU_DSP_FREQUENCY
   _audio_buffer_downsampling_counter += APU_DSP_FREQUENCY;
-  if(_audio_buffer_downsampling_counter > APU_BUS_FREQUENCY){
+  if(_audio_buffer_downsampling_counter > APU_BUS_FREQUENCY and gb_global.fixed_fps == 1){
     _audio_buffer_downsampling_counter -= APU_BUS_FREQUENCY;
 
     // Store samples in the buffer using LR order
@@ -392,8 +392,8 @@ void APU::step(Bus_obj* bus){
   else                      NR52 &= 0b11111110;
   if(_channel_2_is_enabled) NR52 |= 0b00000010;
   else                      NR52 &= 0b11111101;
-  if(_channel_3_is_enabled) NR52 |= 0b00000100;
-  else                      NR52 &= 0b11111011;
+  if(_channel_3_is_enabled and _channel_3_dac_enabled) NR52 |= 0b00000100;
+  else                                                 NR52 &= 0b11111011;
   if(_channel_4_is_enabled) NR52 |= 0b00001000;
   else                      NR52 &= 0b11110111;
 

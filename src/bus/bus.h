@@ -7,6 +7,7 @@
 #include <vector>
 #include "bus_obj.h"
 #include "../PPU/PPU_def.h"
+#include "../utils/gb_global_t.h"
 
 #define BUS_STEP_SIZE 4
 #define FPS 60

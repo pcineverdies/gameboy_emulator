@@ -59,11 +59,9 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->bus->add_to_bus(this->cram);
   this->bus->add_to_bus(this->oam);
   this->bus->add_to_bus(this->ppu);
-  if(fixed_fps)
-    this->bus->add_to_bus(this->apu);
+  this->bus->add_to_bus(this->apu);
   this->bus->add_to_bus(this->timer);
-  if(gb_global.gbc_mode)
-    this->bus->add_to_bus(this->hdma);
+  if(gb_global.gbc_mode) this->bus->add_to_bus(this->hdma);
   this->bus->add_to_bus(this->joypad);
   this->bus->add_to_bus(this->serial);
   this->bus->add_to_bus(this->if_reg);
@@ -94,6 +92,9 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
 
   // No double-speed mode
   gb_global.double_speed          = 0;
+
+  // Fixed fps (delay inside APU)
+  gb_global.fixed_fps             = fixed_fps;
 }
 
 /** Gameboy::run
