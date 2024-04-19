@@ -10,6 +10,7 @@
 
 #define HDMA_GP_DMA 0
 #define HDMA_HBLANK_DMA 1
+#define HDMA_HDMA5_CONTROL_BIT_MASK 0x80
 
 class HDMA : public Bus_obj {
 

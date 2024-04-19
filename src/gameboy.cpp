@@ -78,14 +78,22 @@ Gameboy::Gameboy(std::string rom_file, uint8_t fixed_fps){
   this->cart->_bus_to_read = bus;
   this->wram->_bus_to_read = bus;
 
-  // Add reference to the cartridge
+  // The ppu requires to access the VRAM directly, independently from the current
+  // VRAM bank selected (GBC mode). For this reason, it cannot read from the bus,
+  // but it requires a reference to the VRAM itself. For some embarassing reasons,
+  // the VRAM is stored in the `cartridge` class (since they share the same address space).
+  //
+  // In a realistic implementation, the VRAM is part of the PPU.
   this->ppu->cart = this->cart;
 
-  // Add reference to the cram
+  // The PPU also requires to the access the CRAM independently from the current
+  // selected palettes colors. For this reason, it keeps a reference to the CRAM.
+  //
+  // In a realistic implementation, the CRAM is part of the PPU.
   this->ppu->cram = this->cram;
 
   // Max volume on start-up
-  gb_global.volume_amplification  = 10;
+  gb_global.volume_amplification  = JOYPAD_MAX_VOLUME;
 
   // No request to exit
   gb_global.exit_request          = 0;

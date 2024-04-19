@@ -26,7 +26,6 @@ uint8_t Cartridge::read(uint16_t addr){
     if(_bus_to_read->read(MMU_BROM_EN_INIT_ADDR) != 0) _using_boot_rom = 0;
     else{
       if(addr < 0x100 or addr >= 0x200) return _BOOT_ROM[addr];
-      // printf("reading %04x\n", addr);
     }
   }
 

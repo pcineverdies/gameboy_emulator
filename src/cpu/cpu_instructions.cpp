@@ -855,17 +855,23 @@ bool Cpu::execute_control_misc(Bus_obj* bus){
     // STOP is not used in gbc mode
     if(gb_global.gbc_mode == 0) return true;
 
+    // When a stop in requested in CGB, first the KEY1 register is read.
+    // MSB being 1 menas that a speed switch is requested by the system.
     _u8 = bus->read(MMU_KEY1_REG_INIT_ADDR);
 
     if(_u8 & 0x01){
+
+      // We enter a "wait mode" in which 2050 M-cycles are spent waiting
       _state = State::STATE_STOP;
       _stop_cycles_to_wait = 2050;
 
+      // We modify the KEY1 register to show the new current speed (normal
+      // if previously was fast and viceversa).
       if(_u8 & 0x80)  bus->write(MMU_KEY1_REG_INIT_ADDR, 0x00);
       else            bus->write(MMU_KEY1_REG_INIT_ADDR, 0x80);
-
-      return true;
     }
+
+    return true;
   }
 
   // ============================================================================

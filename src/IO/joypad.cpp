@@ -145,19 +145,19 @@ bool Joypad::update_JOYP(){
   // If the buttons for the volume are checked at each step of the joypad, the volume is decreased/increased too fast
   // volume_debouncing avoids this behavior
   if(volume_debouncing == 0){
+
+    // Volume-up is requested: Increment it only if volume was not max
     if(key_is_pressed(JOYPAD_VOLUME_UP_BUTTON)){
       if(gb_global.volume_amplification != JOYPAD_MAX_VOLUME) gb_global.volume_amplification++;
       volume_debouncing = JOYPAD_VOLUME_DEBOUNCING_DELAY;
-      #ifdef __DEBUG
       printf("Current volume: %d%% \n", gb_global.volume_amplification*10);
-      #endif
     }
+
+    // Volume-down is requested: Decreent it only if volume was not min
     if(key_is_pressed(JOYPAD_VOLUME_DOWN_BUTTON)){
       if(gb_global.volume_amplification != JOYPAD_MIN_VOLUME) gb_global.volume_amplification--;
       volume_debouncing = JOYPAD_VOLUME_DEBOUNCING_DELAY;
-      #ifdef __DEBUG
       printf("Current volume: %d%% \n", gb_global.volume_amplification*10);
-      #endif
     }
   }
   else volume_debouncing--;

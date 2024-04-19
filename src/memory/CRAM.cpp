@@ -14,7 +14,7 @@ uint8_t CRAM::read(uint16_t addr){
   if(addr >= size_addr)
     throw std::invalid_argument( "Address of provided to WRAM over the limit\n" );
 
-  if     (addr == 0){
+  if (addr == 0){
     res = BCPS;
   }
   else if(addr == 1){
@@ -45,12 +45,13 @@ void CRAM::write(uint16_t addr, uint8_t data){
   if(addr >= size_addr)
     throw std::invalid_argument( "Address of provided to WRAM over the limit\n" );
 
-  if     (addr == 0){
+  if (addr == 0){
     BCPS = data;
   }
   else if(addr == 1){
     palette_addr = BCPS & 0b00111111;
     background_palette[palette_addr] = data;
+    // Possibly auto-increment the address to be used
     if(BCPS & 0x80) BCPS = 0x80 | ((palette_addr + 1) % 64);
   }
   else if(addr == 2){
@@ -59,6 +60,7 @@ void CRAM::write(uint16_t addr, uint8_t data){
   else if(addr == 3){
     palette_addr = OCPS & 0b00111111;
     object_palette[palette_addr] = data;
+    // Possibly auto-increment the address to be used
     if(OCPS & 0x80) OCPS = 0x80 | ((palette_addr + 1) % 64);
   }
 }
@@ -74,11 +76,13 @@ void CRAM::write(uint16_t addr, uint8_t data){
 CRAM::CRAM(std::string name, uint16_t init_addr, uint16_t size) : Bus_obj(name, init_addr, size){
   this->set_frequency(0);
 
+  // Both the palettes are 64 bytes long. The bios does not initialize them,
+  // so we can manually set everything to 0xFF.
   background_palette.resize(64);
   object_palette.resize(64);
 
   for(auto& color : background_palette) color = 0xFF;
-  for(auto& color : object_palette) color = 0xFF;
+  for(auto& color : object_palette)     color = 0xFF;
 
   BCPS = 0;
   OCPS = 0;
@@ -113,6 +117,7 @@ uint32_t CRAM::read_color_palette(uint8_t target, uint8_t palette_number, uint8_
   // RGB555 big-endian in order for SDL to use it
   res = upper_byte << 8 | lower_byte;
 
+  // The following code is **highly inspired** by a snippet I found on the emudev discord server
   red   = res & 0x1F;
   green = (res >> 5) & 0x1F;
   blue  = (res >> 10) & 0x1F;

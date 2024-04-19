@@ -144,10 +144,12 @@ void Bus::step(Bus_obj* bus){
 
   for(uint32_t i = 0; i < bus_objects.size(); i++){
 
-    if(gb_global.double_speed == 0)
-      obj_frequency = frequency_cache[i];
-    else
-      obj_frequency = bus_objects[i]->get_frequency();
+    // In single speed mode, the frequency is stored in the `frequency_cache` array,
+    // which makes the access faster. In double speed mode, some elements (mainly CPU and timer)
+    // are able to modify their own frequency, thus the value should be accessed directly. This
+    // mechanism is a bit sketchy, but improves performances in normale-speed mode
+    if(gb_global.double_speed == 0) obj_frequency = frequency_cache[i];
+    else                            obj_frequency = bus_objects[i]->get_frequency();
 
     // Cannot step asynchronous objects, such as memories
     if(obj_frequency == 0) continue;

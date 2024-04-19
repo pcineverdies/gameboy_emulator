@@ -98,6 +98,10 @@ Timer::Timer(std::string name, uint16_t init_addr) : Bus_obj(name, init_addr, 4)
 */
 void Timer::step(Bus_obj* bus){
 
+  // The timer needs to go in double speed mode together with the CPU. The internal variable `current_speed`
+  // stores whether the timer was working in double speed or not. For this reason, is `current_speed` and
+  // `gb_global.double_speed` mismatch, a change of speed is required. After that, nothing changes in the
+  // timer bheaviour
   if(gb_global.gbc_mode == 1 and gb_global.double_speed == 1 and current_speed == 0){
     this->frequency *= 2;
     current_speed = 1;

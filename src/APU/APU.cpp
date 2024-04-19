@@ -322,7 +322,7 @@ void APU::step(Bus_obj* bus){
     _current_DIV_value = bus->read(MMU_TIMER_INIT_ADDR);
 
     // Compute steps of sweep, envelope and length functions, with resepct to a
-    // falling edge of bit 5 of DIV.
+    // falling edge of one bit of DIV.
     // -> Envlope is updated with 1/8 of frequency
     // -> Length  is updated with 1/2 of frequency
     // -> Sweep   is updated with 1/4 of frequency
@@ -330,6 +330,9 @@ void APU::step(Bus_obj* bus){
     _sweep_step = 0;
     _length_step = 0;
 
+    // Different bits are to be checked from the DIV register in case we are in single speed mode or in
+    // double speed mode. Though the behaviour is the same: once the bit has a falling edge, the
+    // frame_sequencer performs a step.
     if(
       (gb_global.double_speed == 0 and (_previous_DIV_value & (1 << 5)) and !(_current_DIV_value & (1 << 5)))
       or
@@ -369,10 +372,15 @@ void APU::step(Bus_obj* bus){
 
   // Downsampling: use one sample each APU_BUS_FREQUENCY / APU_DSP_FREQUENCY
   _audio_buffer_downsampling_counter += APU_DSP_FREQUENCY;
+
+  // Skip the audio phase in case no fixed fps are required. In this case, the audio system goes on
+  // as usual, but no samples are sent to the speaker and no delay is executed.
   if(_audio_buffer_downsampling_counter > APU_BUS_FREQUENCY and gb_global.fixed_fps == 1){
     _audio_buffer_downsampling_counter -= APU_BUS_FREQUENCY;
 
-    // Store samples in the buffer using LR order
+    // Store samples in the buffer using LR order. In this phase, we take into account the volume amplification
+    // as set by the user, together with the amplitude scaling factor. Since the samples are on 16 bits, the
+    // value should not be higher than 2**16 - 1
     _audio_buffer[_audio_buffer_counter++] = apu_sample_left  * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
     _audio_buffer[_audio_buffer_counter++] = apu_sample_right * gb_global.volume_amplification * APU_AMPLITUDE_SCALING;
 
@@ -392,6 +400,8 @@ void APU::step(Bus_obj* bus){
   else                      NR52 &= 0b11111110;
   if(_channel_2_is_enabled) NR52 |= 0b00000010;
   else                      NR52 &= 0b11111101;
+  // For channel 3, we must take into account both the general enable
+  // and dac_enable, otherwise CGB zelda games won't work
   if(_channel_3_is_enabled and _channel_3_dac_enabled) NR52 |= 0b00000100;
   else                                                 NR52 &= 0b11111011;
   if(_channel_4_is_enabled) NR52 |= 0b00001000;
